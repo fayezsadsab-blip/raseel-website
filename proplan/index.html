@@ -356,6 +356,15 @@
             <h1>تهيئة الخطة Planning Initialization</h1>
             <p style="color:#777; margin-bottom:20px; font-size:14px;">حدد الحالة الحالية لكل مورد &mdash; ماذا يعمل ومتى بدأ. Set current state of each resource.</p>
 
+            <!-- Skip Nursery Toggle -->
+            <div class="card" style="display:flex; align-items:center; gap:16px; padding:16px 24px;">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:14px;">
+                    <input type="checkbox" id="skipNurseryToggle" onchange="toggleSkipNursery()" style="width:20px;height:20px;cursor:pointer;accent-color:#2e7d32;">
+                    <span>تخطي الحاضنات Skip Nurseries</span>
+                </label>
+                <span style="color:#777;font-size:12px;">عند التفعيل، ستنتقل الشتلات مباشرة من التبذير إلى النمو (المدة الطويلة بدون حاضنة)<br>When enabled, seedlings go directly from seeding to growing (longer duration, no nursery)</span>
+            </div>
+
             <!-- Seeding Section — Beds only -->
             <div class="card">
                 <h3>&#127793; التبذير (أحواض التبذير) Seeding (Beds)</h3>
@@ -385,7 +394,7 @@
             </div>
 
             <!-- Nursing Section — Nurseries only -->
-            <div class="card">
+            <div class="card" id="nurserySection">
                 <h3>&#129716; الحضن (الحاضنات) Nursing (Nurseries)</h3>
                 <div class="form-grid">
                     <div class="form-group">
@@ -555,7 +564,7 @@ document.querySelectorAll('.sidebar nav a').forEach(link => {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById('page-' + pageId).classList.add('active');
         if (pageId === 'assignments') refreshAssignmentDropdowns();
-        if (pageId === 'planning') { refreshPlanDropdowns(); renderPlanning(); }
+        if (pageId === 'planning') { refreshPlanDropdowns(); renderPlanning(); loadSkipNurseryToggle(); }
         if (pageId === 'production') renderProduction();
     });
 });
@@ -721,6 +730,19 @@ function clearAssignmentForm() {
     document.getElementById('assignPlant').value = '';
     document.getElementById('assignGH').value = '0';
     document.getElementById('assignTarget').value = '0';
+}
+
+// ── Skip Nursery Toggle ──
+function isSkipNursery() { return load('raseel_skipNursery') === true; }
+function toggleSkipNursery() {
+    const skip = document.getElementById('skipNurseryToggle').checked;
+    save('raseel_skipNursery', skip);
+    document.getElementById('nurserySection').style.display = skip ? 'none' : 'block';
+}
+function loadSkipNurseryToggle() {
+    const skip = isSkipNursery();
+    document.getElementById('skipNurseryToggle').checked = skip;
+    document.getElementById('nurserySection').style.display = skip ? 'none' : 'block';
 }
 
 // ── Planning Initialization ──
@@ -945,11 +967,12 @@ function generateCyclePlan() {
 
             const seedEnd = addDays(actualSeedStart, plant.seedDuration);
 
-            // Phase 2: Nursery — check if any nursery is free for the full duration
+            // Phase 2: Nursery — check if any nursery is free (unless skipped)
+            const skipNursery = isSkipNursery();
             let nurseryNum = null;
             let usedNursery = false;
             let nurseryEnd = seedEnd;
-            if (plant.nurseryDuration > 0 && s.nurseryCount > 0) {
+            if (!skipNursery && plant.nurseryDuration > 0 && s.nurseryCount > 0) {
                 nurseryNum = findNurseryFreeOn(seedEnd, plant.nurseryDuration);
                 if (nurseryNum) {
                     usedNursery = true;
