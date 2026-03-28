@@ -790,7 +790,6 @@ function renderProduction() {
         const start = new Date(e.startDate);
         const daysElapsed = Math.max(0, Math.floor((now - start) / 86400000));
 
-        // Determine phase duration
         let phaseDuration = 0;
         if (e.phase === 'seeding') phaseDuration = plant.seedDuration;
         else if (e.phase === 'nursery') phaseDuration = plant.nurseryDuration;
@@ -801,15 +800,20 @@ function renderProduction() {
         const daysRemaining = Math.max(0, phaseDuration - daysElapsed);
         const resLabel = (e.resType === 'gh' ? 'GH' : e.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + e.resNum;
 
-        // Estimate harvest weight if harvesting
-        let harvestInfo = '';
-        if (e.phase === 'harvesting') {
-            const totalWeight = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed) * s.ghCapacity;
-            const afterDamage = totalWeight * (1 - plant.damageRate / 100);
-            harvestInfo = `Est. yield so far: ${afterDamage.toFixed(1)} kg (after ${plant.damageRate}% damage)`;
+        // Calculate harvest production if harvesting
+        let todayKg = 0, soFarKg = 0;
+        if (e.phase === 'harvesting' && daysElapsed > 0) {
+            // Weight on day N = initWeight * (1 + rate/100)^N per plant
+            // Today's production = weight_today - weight_yesterday per plant * capacity
+            const weightToday = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed);
+            const weightYesterday = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed - 1);
+            todayKg = (weightToday - weightYesterday) * s.ghCapacity * (1 - plant.damageRate / 100);
+
+            // Total production so far = sum of daily gains = (weight_today - initWeight) * capacity
+            soFarKg = (weightToday - plant.initWeight) * s.ghCapacity * (1 - plant.damageRate / 100);
         }
 
-        return { ...e, plant, daysElapsed, phaseDuration, progress, daysRemaining, resLabel, harvestInfo };
+        return { ...e, plant, daysElapsed, phaseDuration, progress, daysRemaining, resLabel, todayKg, soFarKg };
     }).filter(Boolean);
 
     // Stats
@@ -817,25 +821,77 @@ function renderProduction() {
     const growing = cycles.filter(c => c.phase === 'growing');
     const seeding = cycles.filter(c => c.phase === 'seeding');
     const nurseryC = cycles.filter(c => c.phase === 'nursery');
+    const totalToday = harvesting.reduce((sum, c) => sum + c.todayKg, 0);
+    const totalSoFar = harvesting.reduce((sum, c) => sum + c.soFarKg, 0);
 
     statsDiv.innerHTML = `
         <div class="stat-card"><div class="num">${cycles.length}</div><div class="lbl">Active Cycles</div></div>
         <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">Harvesting</div></div>
         <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">Growing</div></div>
         <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">Seeding / Nursery</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalToday.toFixed(1)}</div><div class="lbl">kg Today</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalSoFar.toFixed(1)}</div><div class="lbl">kg Total So Far</div></div>
     `;
 
-    // Cycle cards
-    cyclesDiv.innerHTML = cycles.map(c => {
+    // ── Production Summary by Plant ──
+    let summaryHtml = '';
+    if (harvesting.length) {
+        const byPlant = {};
+        harvesting.forEach(c => {
+            const name = c.plant.name;
+            if (!byPlant[name]) byPlant[name] = { todayKg: 0, soFarKg: 0, ghs: [] };
+            byPlant[name].todayKg += c.todayKg;
+            byPlant[name].soFarKg += c.soFarKg;
+            byPlant[name].ghs.push(c.resLabel);
+        });
+        summaryHtml = `<div class="card">
+            <h3>Production Summary by Plant</h3>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Plant</th><th>Greenhouses</th><th>Today (kg)</th><th>Total So Far (kg)</th></tr></thead>
+                    <tbody>${Object.entries(byPlant).map(([name, d]) => `<tr>
+                        <td><strong>${esc(name)}</strong></td>
+                        <td>${d.ghs.join(', ')}</td>
+                        <td style="color:#2e7d32;font-weight:600">${d.todayKg.toFixed(1)}</td>
+                        <td style="color:#1565c0;font-weight:600">${d.soFarKg.toFixed(1)}</td>
+                    </tr>`).join('')}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    // ── Per-GH Harvesting Detail ──
+    let harvestDetailHtml = '';
+    if (harvesting.length) {
+        harvestDetailHtml = `<div class="card">
+            <h3>Harvesting Detail by Greenhouse</h3>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Greenhouse</th><th>Plant</th><th>Day</th><th>Today (kg)</th><th>So Far (kg)</th></tr></thead>
+                    <tbody>${harvesting.map(c => `<tr>
+                        <td><strong>${c.resLabel}</strong></td>
+                        <td>${esc(c.plant.name)}</td>
+                        <td>${c.daysElapsed} of ${c.phaseDuration}</td>
+                        <td style="color:#2e7d32;font-weight:600">${c.todayKg.toFixed(1)}</td>
+                        <td style="color:#1565c0;font-weight:600">${c.soFarKg.toFixed(1)}</td>
+                    </tr>`).join('')}</tbody>
+                </table>
+            </div>
+        </div>`;
+    }
+
+    // ── All Cycle Cards ──
+    const cycleCardsHtml = cycles.map(c => {
         const colors = { seeding: '#ff9800', nursery: '#9c27b0', growing: '#2196f3', harvesting: '#4caf50' };
         return `<div class="cycle-card ${c.phase}">
             <div class="label ${c.phase}">${c.phase}</div>
             <div class="info">${c.resLabel} &mdash; ${esc(c.plant.name)}</div>
             <div class="detail">Day ${c.daysElapsed} of ${c.phaseDuration} &bull; ${c.daysRemaining} days remaining &bull; ${c.progress}% complete</div>
-            ${c.harvestInfo ? `<div class="detail" style="color:#2e7d32;font-weight:600">${c.harvestInfo}</div>` : ''}
             <div class="progress-bar"><div class="fill" style="width:${c.progress}%;background:${colors[c.phase]}"></div></div>
         </div>`;
     }).join('');
+
+    cyclesDiv.innerHTML = summaryHtml + harvestDetailHtml + cycleCardsHtml;
 }
 
 // ── Helpers ──
