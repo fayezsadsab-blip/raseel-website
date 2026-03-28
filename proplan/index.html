@@ -1079,11 +1079,16 @@ function renderProduction() {
         const resLabel = (item.resType === 'gh' ? 'GH' : item.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + item.resNum;
 
         let todayKg = 0, soFarKg = 0;
-        if (item.phase === 'harvesting' && daysElapsed > 0) {
-            const weightToday = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed);
-            const weightYesterday = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed - 1);
-            todayKg = (weightToday - weightYesterday) * s.ghCapacity * (1 - plant.damageRate / 100);
-            soFarKg = (weightToday - plant.initWeight) * s.ghCapacity * (1 - plant.damageRate / 100);
+        if (item.phase === 'harvesting') {
+            // Weight per plant on day N = initWeight * (1 + rate%)^N
+            const weightPerPlant = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed);
+            // Total production = full weight of all plants after damage
+            soFarKg = weightPerPlant * s.ghCapacity * (1 - plant.damageRate / 100);
+            if (daysElapsed > 0) {
+                // Daily gain = today's total - yesterday's total
+                const yesterdayWeight = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed - 1);
+                todayKg = (weightPerPlant - yesterdayWeight) * s.ghCapacity * (1 - plant.damageRate / 100);
+            }
         }
 
         return { ...item, plant, daysElapsed, phaseDuration, progress, daysRemaining, resLabel, todayKg, soFarKg };
