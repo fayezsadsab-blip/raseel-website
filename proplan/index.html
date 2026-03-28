@@ -342,59 +342,114 @@
             <h1>Planning Initialization</h1>
             <p style="color:#777; margin-bottom:20px; font-size:14px;">Set the current state of each resource &mdash; what it is running and when it started.</p>
 
+            <!-- Seeding Section — Beds only -->
             <div class="card">
-                <h3>Add Running Cycle</h3>
+                <h3>&#127793; Seeding (Beds)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Resource Type</label>
-                        <select id="planResType" onchange="updatePlanResourceOptions()">
-                            <option value="gh">Greenhouse</option>
-                            <option value="nursery">Nursery</option>
-                            <option value="bed">Seeding Bed</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Resource #</label>
-                        <select id="planResNum"></select>
+                        <label>Bed #</label>
+                        <select id="planSeedBed"></select>
                     </div>
                     <div class="form-group">
                         <label>Plant Type</label>
-                        <select id="planPlant"></select>
-                    </div>
-                    <div class="form-group">
-                        <label>Current Phase</label>
-                        <select id="planPhase">
-                            <option value="seeding">Seeding</option>
-                            <option value="nursery">Nursery</option>
-                            <option value="growing">Growing</option>
-                            <option value="harvesting">Harvesting</option>
-                        </select>
+                        <select id="planSeedPlant"></select>
                     </div>
                     <div class="form-group">
                         <label>Start Date</label>
-                        <input type="date" id="planStartDate">
+                        <input type="date" id="planSeedDate">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlanEntry()">Add Entry</button>
+                    <button class="btn btn-primary" onclick="savePlanSection('seeding')">Add Seeding Entry</button>
+                </div>
+                <div style="overflow-x:auto; margin-top:16px;">
+                    <table>
+                        <thead><tr><th>Bed</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <tbody id="planSeedTable"></tbody>
+                    </table>
                 </div>
             </div>
 
+            <!-- Nursing Section — Nurseries only -->
             <div class="card">
-                <h3>Current Running Cycles</h3>
-                <div style="overflow-x:auto;">
+                <h3>&#129716; Nursing (Nurseries)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nursery #</label>
+                        <select id="planNurseryNum"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Plant Type</label>
+                        <select id="planNurseryPlant"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="planNurseryDate">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="savePlanSection('nursery')">Add Nursing Entry</button>
+                </div>
+                <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Resource</th>
-                                <th>Plant</th>
-                                <th>Phase</th>
-                                <th>Start Date</th>
-                                <th>Days Elapsed</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="planningTable"></tbody>
+                        <thead><tr><th>Nursery</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <tbody id="planNurseryTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Growing Section — Greenhouses only -->
+            <div class="card">
+                <h3>&#127807; Growing (Greenhouses)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Greenhouse #</label>
+                        <select id="planGrowGH"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Plant Type</label>
+                        <select id="planGrowPlant"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="planGrowDate">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="savePlanSection('growing')">Add Growing Entry</button>
+                </div>
+                <div style="overflow-x:auto; margin-top:16px;">
+                    <table>
+                        <thead><tr><th>Greenhouse</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <tbody id="planGrowTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Harvesting Section — Greenhouses only -->
+            <div class="card">
+                <h3>&#127813; Harvesting (Greenhouses)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Greenhouse #</label>
+                        <select id="planHarvestGH"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Plant Type</label>
+                        <select id="planHarvestPlant"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="planHarvestDate">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="savePlanSection('harvesting')">Add Harvesting Entry</button>
+                </div>
+                <div style="overflow-x:auto; margin-top:16px;">
+                    <table>
+                        <thead><tr><th>Greenhouse</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <tbody id="planHarvestTable"></tbody>
                     </table>
                 </div>
             </div>
@@ -634,62 +689,79 @@ function clearAssignmentForm() {
 
 // ── Planning Initialization ──
 function getPlanEntries() { return load(KEYS.planning) || []; }
-function refreshPlanDropdowns() {
-    const s = getSettings();
-    const plants = getPlants();
-    updatePlanResourceOptions();
-    const plantSel = document.getElementById('planPlant');
-    plantSel.innerHTML = '<option value="">-- Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    document.getElementById('planStartDate').value = new Date().toISOString().split('T')[0];
-}
-function updatePlanResourceOptions() {
-    const s = getSettings();
-    const type = document.getElementById('planResType').value;
-    const sel = document.getElementById('planResNum');
-    let count = type === 'gh' ? s.ghCount : type === 'nursery' ? s.nurseryCount : s.bedCount;
-    const label = type === 'gh' ? 'GH' : type === 'nursery' ? 'Nursery' : 'Bed';
+
+function fillResourceSelect(sel, count, label) {
     sel.innerHTML = '';
     for (let i = 1; i <= count; i++) sel.innerHTML += `<option value="${i}">${label} #${i}</option>`;
-    if (!count) sel.innerHTML = '<option value="">No resources</option>';
+    if (!count) sel.innerHTML = '<option value="">None configured</option>';
 }
+function fillPlantSelect(sel) {
+    const plants = getPlants();
+    sel.innerHTML = '<option value="">-- Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+function refreshPlanDropdowns() {
+    const s = getSettings();
+    const today = new Date().toISOString().split('T')[0];
+    // Seeding — Beds
+    fillResourceSelect(document.getElementById('planSeedBed'), s.bedCount, 'Bed');
+    fillPlantSelect(document.getElementById('planSeedPlant'));
+    document.getElementById('planSeedDate').value = today;
+    // Nursing — Nurseries
+    fillResourceSelect(document.getElementById('planNurseryNum'), s.nurseryCount, 'Nursery');
+    fillPlantSelect(document.getElementById('planNurseryPlant'));
+    document.getElementById('planNurseryDate').value = today;
+    // Growing — GH
+    fillResourceSelect(document.getElementById('planGrowGH'), s.ghCount, 'GH');
+    fillPlantSelect(document.getElementById('planGrowPlant'));
+    document.getElementById('planGrowDate').value = today;
+    // Harvesting — GH
+    fillResourceSelect(document.getElementById('planHarvestGH'), s.ghCount, 'GH');
+    fillPlantSelect(document.getElementById('planHarvestPlant'));
+    document.getElementById('planHarvestDate').value = today;
+}
+
+const sectionConfig = {
+    seeding:    { resType: 'bed',     resId: 'planSeedBed',     plantId: 'planSeedPlant',     dateId: 'planSeedDate',     tableId: 'planSeedTable',     label: 'Bed' },
+    nursery:    { resType: 'nursery', resId: 'planNurseryNum',  plantId: 'planNurseryPlant',  dateId: 'planNurseryDate',  tableId: 'planNurseryTable', label: 'Nursery' },
+    growing:    { resType: 'gh',      resId: 'planGrowGH',      plantId: 'planGrowPlant',     dateId: 'planGrowDate',     tableId: 'planGrowTable',    label: 'GH' },
+    harvesting: { resType: 'gh',      resId: 'planHarvestGH',   plantId: 'planHarvestPlant',  dateId: 'planHarvestDate',  tableId: 'planHarvestTable', label: 'GH' }
+};
+
 function renderPlanning() {
     const entries = getPlanEntries();
     const plants = getPlants();
-    const tbody = document.getElementById('planningTable');
-    if (!entries.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">No running cycles.</td></tr>'; return; }
     const now = new Date();
-    tbody.innerHTML = entries.map(e => {
-        const plant = plants.find(p => p.id === e.plantId);
-        const label = e.resType === 'gh' ? 'GH' : e.resType === 'nursery' ? 'Nursery' : 'Bed';
-        const start = new Date(e.startDate);
-        const days = Math.floor((now - start) / 86400000);
-        return `<tr>
-            <td>${label} #${e.resNum}</td>
-            <td>${plant ? esc(plant.name) : 'Unknown'}</td>
-            <td style="text-transform:capitalize">${e.phase}</td>
-            <td>${e.startDate}</td>
-            <td>${days} days</td>
-            <td><button class="btn btn-sm btn-danger" onclick="deletePlanEntry('${e.id}')">Del</button></td>
-        </tr>`;
-    }).join('');
+    for (const [phase, cfg] of Object.entries(sectionConfig)) {
+        const tbody = document.getElementById(cfg.tableId);
+        const phaseEntries = entries.filter(e => e.phase === phase);
+        if (!phaseEntries.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">No entries.</td></tr>`; continue; }
+        tbody.innerHTML = phaseEntries.map(e => {
+            const plant = plants.find(p => p.id === e.plantId);
+            const days = Math.floor((now - new Date(e.startDate)) / 86400000);
+            return `<tr>
+                <td>${cfg.label} #${e.resNum}</td>
+                <td>${plant ? esc(plant.name) : 'Unknown'}</td>
+                <td>${e.startDate}</td>
+                <td>${days} days</td>
+                <td><button class="btn btn-sm btn-danger" onclick="deletePlanEntry('${e.id}')">Del</button></td>
+            </tr>`;
+        }).join('');
+    }
 }
-function savePlanEntry() {
-    const plantId = document.getElementById('planPlant').value;
-    const resNum = document.getElementById('planResNum').value;
-    if (!plantId || !resNum) { alert('Fill all fields.'); return; }
-    const entry = {
-        id: genId(),
-        resType: document.getElementById('planResType').value,
-        resNum,
-        plantId,
-        phase: document.getElementById('planPhase').value,
-        startDate: document.getElementById('planStartDate').value
-    };
+
+function savePlanSection(phase) {
+    const cfg = sectionConfig[phase];
+    const plantId = document.getElementById(cfg.plantId).value;
+    const resNum = document.getElementById(cfg.resId).value;
+    const startDate = document.getElementById(cfg.dateId).value;
+    if (!plantId || !resNum || !startDate) { alert('Fill all fields.'); return; }
+    const entry = { id: genId(), resType: cfg.resType, resNum, plantId, phase, startDate };
     const list = getPlanEntries();
     list.push(entry);
     save(KEYS.planning, list);
     renderPlanning();
 }
+
 function deletePlanEntry(id) {
     if (!confirm('Remove this entry?')) return;
     save(KEYS.planning, getPlanEntries().filter(e => e.id !== id));
