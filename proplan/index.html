@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raseel | Production Planner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a2e; }
+
+        /* ── Login ── */
+        .login-overlay {
+            position: fixed; inset: 0; background: linear-gradient(135deg, #1a472a 0%, #2e7d32 50%, #4caf50 100%);
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .login-box {
+            background: #fff; border-radius: 16px; padding: 48px 40px; width: 360px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
+        }
+        .login-box h1 { font-size: 28px; color: #1a472a; margin-bottom: 8px; }
+        .login-box p { color: #666; margin-bottom: 32px; font-size: 14px; }
+        .login-box input {
+            width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px;
+            font-size: 18px; text-align: center; letter-spacing: 12px; font-weight: 700;
+            outline: none; transition: border-color .2s;
+        }
+        .login-box input:focus { border-color: #2e7d32; }
+        .login-box .error { color: #d32f2f; font-size: 13px; margin-top: 8px; min-height: 20px; }
+        .login-box button {
+            margin-top: 20px; width: 100%; padding: 14px; background: #2e7d32; color: #fff;
+            border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: background .2s;
+        }
+        .login-box button:hover { background: #1b5e20; }
+
+        /* ── Layout ── */
+        .app { display: none; }
+        .app.active { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 240px; background: #1a472a; color: #fff; padding: 24px 0; position: fixed;
+            top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100;
+        }
+        .sidebar .brand { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 8px; }
+        .sidebar .brand h2 { font-size: 20px; }
+        .sidebar .brand span { font-size: 12px; opacity: .7; }
+        .sidebar nav a {
+            display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: rgba(255,255,255,.7);
+            text-decoration: none; font-size: 14px; font-weight: 500; transition: all .2s; border-left: 3px solid transparent;
+        }
+        .sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+        .sidebar nav a.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: #4caf50; }
+        .sidebar nav a .icon { width: 20px; text-align: center; font-size: 16px; }
+        .sidebar .logout { position: absolute; bottom: 16px; left: 0; right: 0; padding: 0 16px; }
+        .sidebar .logout button {
+            width: 100%; padding: 10px; background: rgba(255,255,255,.1); color: #fff; border: none;
+            border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .2s;
+        }
+        .sidebar .logout button:hover { background: rgba(255,255,255,.2); }
+        .main { margin-left: 240px; flex: 1; padding: 32px; }
+        .main h1 { font-size: 24px; margin-bottom: 24px; color: #1a472a; }
+
+        /* ── Pages ── */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ── Cards & Forms ── */
+        .card {
+            background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+        .card h3 { font-size: 16px; color: #1a472a; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 13px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select {
+            padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px;
+            font-family: inherit; outline: none; transition: border-color .2s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #2e7d32; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all .2s; font-family: inherit;
+        }
+        .btn-primary { background: #2e7d32; color: #fff; }
+        .btn-primary:hover { background: #1b5e20; }
+        .btn-danger { background: #d32f2f; color: #fff; }
+        .btn-danger:hover { background: #b71c1c; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-secondary:hover { background: #bdbdbd; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .actions { display: flex; gap: 8px; margin-top: 16px; }
+
+        /* ── Tables ── */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f5f5f5; font-weight: 600; text-align: left; padding: 10px 12px; color: #555; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        tr:hover td { background: #f9fdf9; }
+        .empty-msg { text-align: center; color: #999; padding: 40px; font-size: 14px; }
+
+        /* ── Production ── */
+        .cycle-card {
+            border-left: 4px solid #4caf50; background: #fff; border-radius: 8px;
+            padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+        }
+        .cycle-card.seeding { border-left-color: #ff9800; }
+        .cycle-card.nursery { border-left-color: #9c27b0; }
+        .cycle-card.growing { border-left-color: #2196f3; }
+        .cycle-card.harvesting { border-left-color: #4caf50; }
+        .cycle-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .cycle-card .label.seeding { color: #ff9800; }
+        .cycle-card .label.nursery { color: #9c27b0; }
+        .cycle-card .label.growing { color: #2196f3; }
+        .cycle-card .label.harvesting { color: #4caf50; }
+        .cycle-card .info { font-size: 14px; font-weight: 600; }
+        .cycle-card .detail { font-size: 12px; color: #777; margin-top: 4px; }
+        .progress-bar { height: 6px; background: #e0e0e0; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; border-radius: 3px; transition: width .3s; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #fff; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        .stat-card .num { font-size: 32px; font-weight: 700; color: #2e7d32; }
+        .stat-card .lbl { font-size: 12px; color: #777; margin-top: 4px; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar .brand h2, .sidebar .brand span, .sidebar nav a span:not(.icon) { display: none; }
+            .sidebar nav a { justify-content: center; padding: 14px; }
+            .sidebar nav a .icon { width: auto; }
+            .main { margin-left: 60px; padding: 20px; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Login Screen ── -->
+<div class="login-overlay" id="loginScreen">
+    <div class="login-box">
+        <h1>Raseel</h1>
+        <p>Production Planner &mdash; Enter access code</p>
+        <input type="password" id="loginCode" maxlength="10" placeholder="----" autofocus>
+        <div class="error" id="loginError"></div>
+        <button onclick="attemptLogin()">Sign In</button>
+    </div>
+</div>
+
+<!-- ── App ── -->
+<div class="app" id="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>Raseel</h2>
+            <span>Production Planner</span>
+        </div>
+        <nav>
+            <a href="#" data-page="settings" class="active"><span class="icon">&#9881;</span><span>Settings</span></a>
+            <a href="#" data-page="plants"><span class="icon">&#127793;</span><span>Plant Types</span></a>
+            <a href="#" data-page="assignments"><span class="icon">&#127968;</span><span>GH Assignments</span></a>
+            <a href="#" data-page="planning"><span class="icon">&#128197;</span><span>Planning Init</span></a>
+            <a href="#" data-page="production"><span class="icon">&#128200;</span><span>Production</span></a>
+        </nav>
+        <div class="logout">
+            <button onclick="logout()">&#x2190; Sign Out</button>
+        </div>
+    </aside>
+
+    <div class="main">
+
+        <!-- ════ Settings Page ════ -->
+        <div class="page active" id="page-settings">
+            <h1>Infrastructure Settings</h1>
+
+            <div class="card">
+                <h3>Greenhouses</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Number of Greenhouses</label>
+                        <input type="number" id="ghCount" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Plant Capacity per GH</label>
+                        <input type="number" id="ghCapacity" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Seeding Beds</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Number of Seeding Beds</label>
+                        <input type="number" id="bedCount" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Seed Capacity per Bed</label>
+                        <input type="number" id="bedCapacity" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Nurseries</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Number of Nurseries</label>
+                        <input type="number" id="nurseryCount" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Capacity per Nursery</label>
+                        <input type="number" id="nurseryCapacity" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+
+        <!-- ════ Plant Types Page ════ -->
+        <div class="page" id="page-plants">
+            <h1>Plant Types</h1>
+
+            <div class="card">
+                <h3>Add / Edit Plant Type</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Plant Name</label>
+                        <input type="text" id="plantName" placeholder="e.g. Tomato">
+                    </div>
+                    <div class="form-group">
+                        <label>Seeding Duration (days)</label>
+                        <input type="number" id="plantSeedDuration" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Growing Duration - No Nursery (days)</label>
+                        <input type="number" id="plantGrowNoNursery" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Growing Duration - With Nursery (days)</label>
+                        <input type="number" id="plantGrowWithNursery" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Nursery Growing Duration (days)</label>
+                        <input type="number" id="plantNurseryDuration" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Harvesting Duration (days)</label>
+                        <input type="number" id="plantHarvestDuration" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Initial Weight (kg)</label>
+                        <input type="number" id="plantInitWeight" min="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Growth Rate / Day During Harvest (kg)</label>
+                        <input type="number" id="plantGrowthRate" min="0" step="0.001" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Damage Rate (%)</label>
+                        <input type="number" id="plantDamageRate" min="0" max="100" step="0.1" value="0">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="savePlant()">Save Plant</button>
+                    <button class="btn btn-secondary" onclick="clearPlantForm()">Clear</button>
+                </div>
+                <input type="hidden" id="editPlantId" value="">
+            </div>
+
+            <div class="card">
+                <h3>Saved Plant Types</h3>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Seed (d)</th>
+                                <th>Grow no N (d)</th>
+                                <th>Grow w/ N (d)</th>
+                                <th>Nursery (d)</th>
+                                <th>Harvest (d)</th>
+                                <th>Init Wt (kg)</th>
+                                <th>Rate/d (kg)</th>
+                                <th>Damage %</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plantsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════ GH Assignments Page ════ -->
+        <div class="page" id="page-assignments">
+            <h1>Plant to Greenhouse Assignments</h1>
+
+            <div class="card">
+                <h3>Assign Plant to Greenhouse</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Plant Type</label>
+                        <select id="assignPlant"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Assigned Greenhouse</label>
+                        <select id="assignGH"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Production / Month (kg)</label>
+                        <input type="number" id="assignTarget" min="0" step="0.1" value="0">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="saveAssignment()">Save Assignment</button>
+                    <button class="btn btn-secondary" onclick="clearAssignmentForm()">Clear</button>
+                </div>
+                <input type="hidden" id="editAssignId" value="">
+            </div>
+
+            <div class="card">
+                <h3>Current Assignments</h3>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Plant</th>
+                                <th>Greenhouse</th>
+                                <th>Target (kg/month)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assignmentsTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════ Planning Initialization Page ════ -->
+        <div class="page" id="page-planning">
+            <h1>Planning Initialization</h1>
+            <p style="color:#777; margin-bottom:20px; font-size:14px;">Set the current state of each resource &mdash; what it is running and when it started.</p>
+
+            <div class="card">
+                <h3>Add Running Cycle</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Resource Type</label>
+                        <select id="planResType" onchange="updatePlanResourceOptions()">
+                            <option value="gh">Greenhouse</option>
+                            <option value="nursery">Nursery</option>
+                            <option value="bed">Seeding Bed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Resource #</label>
+                        <select id="planResNum"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Plant Type</label>
+                        <select id="planPlant"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Current Phase</label>
+                        <select id="planPhase">
+                            <option value="seeding">Seeding</option>
+                            <option value="nursery">Nursery</option>
+                            <option value="growing">Growing</option>
+                            <option value="harvesting">Harvesting</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="planStartDate">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="savePlanEntry()">Add Entry</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Current Running Cycles</h3>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Resource</th>
+                                <th>Plant</th>
+                                <th>Phase</th>
+                                <th>Start Date</th>
+                                <th>Days Elapsed</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planningTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════ Production Page ════ -->
+        <div class="page" id="page-production">
+            <h1>Production Overview</h1>
+
+            <div class="stat-grid" id="productionStats"></div>
+
+            <div id="productionCycles"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Data Layer (localStorage) ──
+const KEYS = {
+    auth: 'raseel_auth',
+    settings: 'raseel_settings',
+    plants: 'raseel_plants',
+    assignments: 'raseel_assignments',
+    planning: 'raseel_planning'
+};
+const ACCESS_CODE = '1234';
+
+function load(key) { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } }
+function save(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// ── Login ──
+function attemptLogin() {
+    const code = document.getElementById('loginCode').value;
+    if (code === ACCESS_CODE) {
+        save(KEYS.auth, { loggedIn: true, ts: Date.now() });
+        showApp();
+    } else {
+        document.getElementById('loginError').textContent = 'Invalid code. Please try again.';
+    }
+}
+document.getElementById('loginCode').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
+
+function logout() {
+    localStorage.removeItem(KEYS.auth);
+    location.reload();
+}
+
+function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    loadAllData();
+}
+
+function checkAuth() {
+    const auth = load(KEYS.auth);
+    if (auth && auth.loggedIn) showApp();
+}
+
+// ── Navigation ──
+document.querySelectorAll('.sidebar nav a').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('.sidebar nav a').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        const pageId = link.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + pageId).classList.add('active');
+        if (pageId === 'assignments') refreshAssignmentDropdowns();
+        if (pageId === 'planning') { refreshPlanDropdowns(); renderPlanning(); }
+        if (pageId === 'production') renderProduction();
+    });
+});
+
+// ── Settings ──
+function loadSettings() {
+    const s = load(KEYS.settings) || { ghCount: 0, ghCapacity: 0, bedCount: 0, bedCapacity: 0, nurseryCount: 0, nurseryCapacity: 0 };
+    document.getElementById('ghCount').value = s.ghCount;
+    document.getElementById('ghCapacity').value = s.ghCapacity;
+    document.getElementById('bedCount').value = s.bedCount;
+    document.getElementById('bedCapacity').value = s.bedCapacity;
+    document.getElementById('nurseryCount').value = s.nurseryCount;
+    document.getElementById('nurseryCapacity').value = s.nurseryCapacity;
+}
+function saveSettings() {
+    const s = {
+        ghCount: +document.getElementById('ghCount').value,
+        ghCapacity: +document.getElementById('ghCapacity').value,
+        bedCount: +document.getElementById('bedCount').value,
+        bedCapacity: +document.getElementById('bedCapacity').value,
+        nurseryCount: +document.getElementById('nurseryCount').value,
+        nurseryCapacity: +document.getElementById('nurseryCapacity').value
+    };
+    save(KEYS.settings, s);
+    alert('Settings saved!');
+}
+function getSettings() { return load(KEYS.settings) || { ghCount: 0, ghCapacity: 0, bedCount: 0, bedCapacity: 0, nurseryCount: 0, nurseryCapacity: 0 }; }
+
+// ── Plants ──
+function getPlants() { return load(KEYS.plants) || []; }
+function renderPlants() {
+    const plants = getPlants();
+    const tbody = document.getElementById('plantsTable');
+    if (!plants.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-msg">No plant types defined yet.</td></tr>'; return; }
+    tbody.innerHTML = plants.map(p => `<tr>
+        <td><strong>${esc(p.name)}</strong></td>
+        <td>${p.seedDuration}</td>
+        <td>${p.growNoNursery}</td>
+        <td>${p.growWithNursery}</td>
+        <td>${p.nurseryDuration}</td>
+        <td>${p.harvestDuration}</td>
+        <td>${p.initWeight}</td>
+        <td>${p.growthRate}</td>
+        <td>${p.damageRate}%</td>
+        <td>
+            <button class="btn btn-sm btn-secondary" onclick="editPlant('${p.id}')">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deletePlant('${p.id}')">Del</button>
+        </td>
+    </tr>`).join('');
+}
+function savePlant() {
+    const name = document.getElementById('plantName').value.trim();
+    if (!name) { alert('Plant name is required.'); return; }
+    const plant = {
+        id: document.getElementById('editPlantId').value || genId(),
+        name,
+        seedDuration: +document.getElementById('plantSeedDuration').value,
+        growNoNursery: +document.getElementById('plantGrowNoNursery').value,
+        growWithNursery: +document.getElementById('plantGrowWithNursery').value,
+        nurseryDuration: +document.getElementById('plantNurseryDuration').value,
+        harvestDuration: +document.getElementById('plantHarvestDuration').value,
+        initWeight: +document.getElementById('plantInitWeight').value,
+        growthRate: +document.getElementById('plantGrowthRate').value,
+        damageRate: +document.getElementById('plantDamageRate').value
+    };
+    let plants = getPlants();
+    const idx = plants.findIndex(p => p.id === plant.id);
+    if (idx >= 0) plants[idx] = plant; else plants.push(plant);
+    save(KEYS.plants, plants);
+    clearPlantForm();
+    renderPlants();
+}
+function editPlant(id) {
+    const p = getPlants().find(x => x.id === id); if (!p) return;
+    document.getElementById('editPlantId').value = p.id;
+    document.getElementById('plantName').value = p.name;
+    document.getElementById('plantSeedDuration').value = p.seedDuration;
+    document.getElementById('plantGrowNoNursery').value = p.growNoNursery;
+    document.getElementById('plantGrowWithNursery').value = p.growWithNursery;
+    document.getElementById('plantNurseryDuration').value = p.nurseryDuration;
+    document.getElementById('plantHarvestDuration').value = p.harvestDuration;
+    document.getElementById('plantInitWeight').value = p.initWeight;
+    document.getElementById('plantGrowthRate').value = p.growthRate;
+    document.getElementById('plantDamageRate').value = p.damageRate;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function deletePlant(id) {
+    if (!confirm('Delete this plant type?')) return;
+    save(KEYS.plants, getPlants().filter(p => p.id !== id));
+    renderPlants();
+}
+function clearPlantForm() {
+    document.getElementById('editPlantId').value = '';
+    ['plantName','plantSeedDuration','plantGrowNoNursery','plantGrowWithNursery','plantNurseryDuration','plantHarvestDuration','plantInitWeight','plantGrowthRate','plantDamageRate'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = el.type === 'text' ? '' : '0';
+    });
+}
+
+// ── Assignments ──
+function getAssignments() { return load(KEYS.assignments) || []; }
+function refreshAssignmentDropdowns() {
+    const plants = getPlants();
+    const s = getSettings();
+    const plantSel = document.getElementById('assignPlant');
+    const ghSel = document.getElementById('assignGH');
+    plantSel.innerHTML = '<option value="">-- Select Plant --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    let ghOpts = '<option value="0">None (0)</option><option value="any">Any</option>';
+    for (let i = 1; i <= s.ghCount; i++) ghOpts += `<option value="${i}">GH #${i}</option>`;
+    ghSel.innerHTML = ghOpts;
+}
+function renderAssignments() {
+    const assignments = getAssignments();
+    const plants = getPlants();
+    const tbody = document.getElementById('assignmentsTable');
+    if (!assignments.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">No assignments yet.</td></tr>'; return; }
+    tbody.innerHTML = assignments.map(a => {
+        const plant = plants.find(p => p.id === a.plantId);
+        const ghLabel = a.gh === '0' ? 'None' : a.gh === 'any' ? 'Any GH' : `GH #${a.gh}`;
+        return `<tr>
+            <td>${plant ? esc(plant.name) : '<em>Unknown</em>'}</td>
+            <td>${ghLabel}</td>
+            <td>${a.targetPerMonth}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="editAssignment('${a.id}')">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteAssignment('${a.id}')">Del</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+function saveAssignment() {
+    const plantId = document.getElementById('assignPlant').value;
+    if (!plantId) { alert('Select a plant.'); return; }
+    const a = {
+        id: document.getElementById('editAssignId').value || genId(),
+        plantId,
+        gh: document.getElementById('assignGH').value,
+        targetPerMonth: +document.getElementById('assignTarget').value
+    };
+    let list = getAssignments();
+    const idx = list.findIndex(x => x.id === a.id);
+    if (idx >= 0) list[idx] = a; else list.push(a);
+    save(KEYS.assignments, list);
+    clearAssignmentForm();
+    renderAssignments();
+}
+function editAssignment(id) {
+    const a = getAssignments().find(x => x.id === id); if (!a) return;
+    refreshAssignmentDropdowns();
+    document.getElementById('editAssignId').value = a.id;
+    document.getElementById('assignPlant').value = a.plantId;
+    document.getElementById('assignGH').value = a.gh;
+    document.getElementById('assignTarget').value = a.targetPerMonth;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function deleteAssignment(id) {
+    if (!confirm('Delete this assignment?')) return;
+    save(KEYS.assignments, getAssignments().filter(a => a.id !== id));
+    renderAssignments();
+}
+function clearAssignmentForm() {
+    document.getElementById('editAssignId').value = '';
+    document.getElementById('assignPlant').value = '';
+    document.getElementById('assignGH').value = '0';
+    document.getElementById('assignTarget').value = '0';
+}
+
+// ── Planning Initialization ──
+function getPlanEntries() { return load(KEYS.planning) || []; }
+function refreshPlanDropdowns() {
+    const s = getSettings();
+    const plants = getPlants();
+    updatePlanResourceOptions();
+    const plantSel = document.getElementById('planPlant');
+    plantSel.innerHTML = '<option value="">-- Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    document.getElementById('planStartDate').value = new Date().toISOString().split('T')[0];
+}
+function updatePlanResourceOptions() {
+    const s = getSettings();
+    const type = document.getElementById('planResType').value;
+    const sel = document.getElementById('planResNum');
+    let count = type === 'gh' ? s.ghCount : type === 'nursery' ? s.nurseryCount : s.bedCount;
+    const label = type === 'gh' ? 'GH' : type === 'nursery' ? 'Nursery' : 'Bed';
+    sel.innerHTML = '';
+    for (let i = 1; i <= count; i++) sel.innerHTML += `<option value="${i}">${label} #${i}</option>`;
+    if (!count) sel.innerHTML = '<option value="">No resources</option>';
+}
+function renderPlanning() {
+    const entries = getPlanEntries();
+    const plants = getPlants();
+    const tbody = document.getElementById('planningTable');
+    if (!entries.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">No running cycles.</td></tr>'; return; }
+    const now = new Date();
+    tbody.innerHTML = entries.map(e => {
+        const plant = plants.find(p => p.id === e.plantId);
+        const label = e.resType === 'gh' ? 'GH' : e.resType === 'nursery' ? 'Nursery' : 'Bed';
+        const start = new Date(e.startDate);
+        const days = Math.floor((now - start) / 86400000);
+        return `<tr>
+            <td>${label} #${e.resNum}</td>
+            <td>${plant ? esc(plant.name) : 'Unknown'}</td>
+            <td style="text-transform:capitalize">${e.phase}</td>
+            <td>${e.startDate}</td>
+            <td>${days} days</td>
+            <td><button class="btn btn-sm btn-danger" onclick="deletePlanEntry('${e.id}')">Del</button></td>
+        </tr>`;
+    }).join('');
+}
+function savePlanEntry() {
+    const plantId = document.getElementById('planPlant').value;
+    const resNum = document.getElementById('planResNum').value;
+    if (!plantId || !resNum) { alert('Fill all fields.'); return; }
+    const entry = {
+        id: genId(),
+        resType: document.getElementById('planResType').value,
+        resNum,
+        plantId,
+        phase: document.getElementById('planPhase').value,
+        startDate: document.getElementById('planStartDate').value
+    };
+    const list = getPlanEntries();
+    list.push(entry);
+    save(KEYS.planning, list);
+    renderPlanning();
+}
+function deletePlanEntry(id) {
+    if (!confirm('Remove this entry?')) return;
+    save(KEYS.planning, getPlanEntries().filter(e => e.id !== id));
+    renderPlanning();
+}
+
+// ── Production Overview ──
+function renderProduction() {
+    const entries = getPlanEntries();
+    const plants = getPlants();
+    const s = getSettings();
+    const now = new Date();
+    const statsDiv = document.getElementById('productionStats');
+    const cyclesDiv = document.getElementById('productionCycles');
+
+    if (!entries.length) {
+        statsDiv.innerHTML = '';
+        cyclesDiv.innerHTML = '<div class="card"><p class="empty-msg">No cycles initialized. Go to Planning Init to set up current cycles.</p></div>';
+        return;
+    }
+
+    // Build cycle info for each entry
+    const cycles = entries.map(e => {
+        const plant = plants.find(p => p.id === e.plantId);
+        if (!plant) return null;
+        const start = new Date(e.startDate);
+        const daysElapsed = Math.max(0, Math.floor((now - start) / 86400000));
+
+        // Determine phase duration
+        let phaseDuration = 0;
+        if (e.phase === 'seeding') phaseDuration = plant.seedDuration;
+        else if (e.phase === 'nursery') phaseDuration = plant.nurseryDuration;
+        else if (e.phase === 'growing') phaseDuration = plant.growWithNursery || plant.growNoNursery;
+        else if (e.phase === 'harvesting') phaseDuration = plant.harvestDuration;
+
+        const progress = phaseDuration > 0 ? Math.min(100, Math.round((daysElapsed / phaseDuration) * 100)) : 0;
+        const daysRemaining = Math.max(0, phaseDuration - daysElapsed);
+        const resLabel = (e.resType === 'gh' ? 'GH' : e.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + e.resNum;
+
+        // Estimate harvest weight if harvesting
+        let harvestInfo = '';
+        if (e.phase === 'harvesting') {
+            const totalWeight = (plant.initWeight + plant.growthRate * daysElapsed) * s.ghCapacity;
+            const afterDamage = totalWeight * (1 - plant.damageRate / 100);
+            harvestInfo = `Est. yield so far: ${afterDamage.toFixed(1)} kg (after ${plant.damageRate}% damage)`;
+        }
+
+        return { ...e, plant, daysElapsed, phaseDuration, progress, daysRemaining, resLabel, harvestInfo };
+    }).filter(Boolean);
+
+    // Stats
+    const harvesting = cycles.filter(c => c.phase === 'harvesting');
+    const growing = cycles.filter(c => c.phase === 'growing');
+    const seeding = cycles.filter(c => c.phase === 'seeding');
+    const nurseryC = cycles.filter(c => c.phase === 'nursery');
+
+    statsDiv.innerHTML = `
+        <div class="stat-card"><div class="num">${cycles.length}</div><div class="lbl">Active Cycles</div></div>
+        <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">Harvesting</div></div>
+        <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">Growing</div></div>
+        <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">Seeding / Nursery</div></div>
+    `;
+
+    // Cycle cards
+    cyclesDiv.innerHTML = cycles.map(c => {
+        const colors = { seeding: '#ff9800', nursery: '#9c27b0', growing: '#2196f3', harvesting: '#4caf50' };
+        return `<div class="cycle-card ${c.phase}">
+            <div class="label ${c.phase}">${c.phase}</div>
+            <div class="info">${c.resLabel} &mdash; ${esc(c.plant.name)}</div>
+            <div class="detail">Day ${c.daysElapsed} of ${c.phaseDuration} &bull; ${c.daysRemaining} days remaining &bull; ${c.progress}% complete</div>
+            ${c.harvestInfo ? `<div class="detail" style="color:#2e7d32;font-weight:600">${c.harvestInfo}</div>` : ''}
+            <div class="progress-bar"><div class="fill" style="width:${c.progress}%;background:${colors[c.phase]}"></div></div>
+        </div>`;
+    }).join('');
+}
+
+// ── Helpers ──
+function esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+function loadAllData() {
+    loadSettings();
+    renderPlants();
+    renderAssignments();
+}
+
+// ── Init ──
+checkAuth();
+</script>
+
+</body>
+</html>
