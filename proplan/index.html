@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raseel | Production Planner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>رسيل | مخطط الإنتاج</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a2e; }
+        body { font-family: 'Tajawal', sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a2e; direction: rtl; }
 
         /* ── Login ── */
         .login-overlay {
@@ -39,25 +39,25 @@
         .app.active { display: flex; min-height: 100vh; }
         .sidebar {
             width: 240px; background: #1a472a; color: #fff; padding: 24px 0; position: fixed;
-            top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100;
+            top: 0; right: 0; bottom: 0; overflow-y: auto; z-index: 100;
         }
         .sidebar .brand { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 8px; }
         .sidebar .brand h2 { font-size: 20px; }
         .sidebar .brand span { font-size: 12px; opacity: .7; }
         .sidebar nav a {
             display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: rgba(255,255,255,.7);
-            text-decoration: none; font-size: 14px; font-weight: 500; transition: all .2s; border-left: 3px solid transparent;
+            text-decoration: none; font-size: 14px; font-weight: 500; transition: all .2s; border-right: 3px solid transparent;
         }
         .sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
-        .sidebar nav a.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: #4caf50; }
+        .sidebar nav a.active { background: rgba(255,255,255,.12); color: #fff; border-right-color: #4caf50; }
         .sidebar nav a .icon { width: 20px; text-align: center; font-size: 16px; }
-        .sidebar .logout { position: absolute; bottom: 16px; left: 0; right: 0; padding: 0 16px; }
+        .sidebar .logout { position: absolute; bottom: 16px; right: 0; left: 0; padding: 0 16px; }
         .sidebar .logout button {
             width: 100%; padding: 10px; background: rgba(255,255,255,.1); color: #fff; border: none;
             border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .2s;
         }
         .sidebar .logout button:hover { background: rgba(255,255,255,.2); }
-        .main { margin-left: 240px; flex: 1; padding: 32px; }
+        .main { margin-right: 240px; flex: 1; padding: 32px; }
         .main h1 { font-size: 24px; margin-bottom: 24px; color: #1a472a; }
 
         /* ── Pages ── */
@@ -93,7 +93,7 @@
 
         /* ── Tables ── */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #f5f5f5; font-weight: 600; text-align: left; padding: 10px 12px; color: #555; border-bottom: 2px solid #e0e0e0; }
+        th { background: #f5f5f5; font-weight: 600; text-align: right; padding: 10px 12px; color: #555; border-bottom: 2px solid #e0e0e0; }
         td { padding: 10px 12px; border-bottom: 1px solid #eee; }
         tr:hover td { background: #f9fdf9; }
         .empty-msg { text-align: center; color: #999; padding: 40px; font-size: 14px; }
@@ -135,7 +135,7 @@
             .sidebar .brand h2, .sidebar .brand span, .sidebar nav a span:not(.icon) { display: none; }
             .sidebar nav a { justify-content: center; padding: 14px; }
             .sidebar nav a .icon { width: auto; }
-            .main { margin-left: 60px; padding: 20px; }
+            .main { margin-right: 60px; margin-left: 0; padding: 20px; }
             .form-grid { grid-template-columns: 1fr; }
         }
     </style>
@@ -145,11 +145,11 @@
 <!-- ── Login Screen ── -->
 <div class="login-overlay" id="loginScreen">
     <div class="login-box">
-        <h1>Raseel</h1>
-        <p>Production Planner &mdash; Enter access code</p>
+        <h1>رسيل</h1>
+        <p>مخطط الإنتاج &mdash; أدخل رمز الدخول</p>
         <input type="password" id="loginCode" maxlength="10" placeholder="----" autofocus>
         <div class="error" id="loginError"></div>
-        <button onclick="attemptLogin()">Sign In</button>
+        <button onclick="attemptLogin()">تسجيل الدخول</button>
     </div>
 </div>
 
@@ -157,141 +157,141 @@
 <div class="app" id="app">
     <aside class="sidebar">
         <div class="brand">
-            <h2>Raseel</h2>
-            <span>Production Planner</span>
+            <h2>رسيل</h2>
+            <span>مخطط الإنتاج</span>
         </div>
         <nav>
-            <a href="#" data-page="settings" class="active"><span class="icon">&#9881;</span><span>Settings</span></a>
-            <a href="#" data-page="plants"><span class="icon">&#127793;</span><span>Plant Types</span></a>
-            <a href="#" data-page="assignments"><span class="icon">&#127968;</span><span>GH Assignments</span></a>
-            <a href="#" data-page="planning"><span class="icon">&#128197;</span><span>Planning Init</span></a>
-            <a href="#" data-page="production"><span class="icon">&#128200;</span><span>Production</span></a>
+            <a href="#" data-page="production" class="active"><span class="icon">&#128200;</span><span>الإنتاج Production</span></a>
+            <a href="#" data-page="planning"><span class="icon">&#128197;</span><span>تهيئة الخطة Plan Init</span></a>
+            <a href="#" data-page="assignments"><span class="icon">&#127968;</span><span>توزيع البيوت GH Assign</span></a>
+            <a href="#" data-page="plants"><span class="icon">&#127793;</span><span>أنواع النبات Plants</span></a>
+            <a href="#" data-page="settings"><span class="icon">&#9881;</span><span>الإعدادات Settings</span></a>
         </nav>
         <div class="logout">
-            <button onclick="logout()">&#x2190; Sign Out</button>
+            <button onclick="logout()">&#x2190; تسجيل الخروج</button>
         </div>
     </aside>
 
     <div class="main">
 
         <!-- ════ Settings Page ════ -->
-        <div class="page active" id="page-settings">
-            <h1>Infrastructure Settings</h1>
+        <div class="page" id="page-settings">
+            <h1>الإعدادات Infrastructure Settings</h1>
 
             <div class="card">
-                <h3>Greenhouses</h3>
+                <h3>البيوت المحمية Greenhouses</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Number of Greenhouses</label>
+                        <label>عدد البيوت المحمية Number of GH</label>
                         <input type="number" id="ghCount" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Plant Capacity per GH</label>
+                        <label>سعة النباتات لكل بيت Capacity/GH</label>
                         <input type="number" id="ghCapacity" min="0" value="0">
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>Seeding Beds</h3>
+                <h3>أحواض البذور Seeding Beds</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Number of Seeding Beds</label>
+                        <label>عدد أحواض البذور Number of Beds</label>
                         <input type="number" id="bedCount" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Seed Capacity per Bed</label>
+                        <label>سعة كل حوض Capacity/Bed</label>
                         <input type="number" id="bedCapacity" min="0" value="0">
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>Nurseries</h3>
+                <h3>المشاتل Nurseries</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Number of Nurseries</label>
+                        <label>عدد المشاتل Number of Nurseries</label>
                         <input type="number" id="nurseryCount" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Capacity per Nursery</label>
+                        <label>سعة كل مشتل Capacity/Nursery</label>
                         <input type="number" id="nurseryCapacity" min="0" value="0">
                     </div>
                 </div>
             </div>
 
             <div class="actions">
-                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                <button class="btn btn-primary" onclick="saveSettings()">حفظ الإعدادات Save</button>
             </div>
         </div>
 
         <!-- ════ Plant Types Page ════ -->
         <div class="page" id="page-plants">
-            <h1>Plant Types</h1>
+            <h1>أنواع النباتات Plant Types</h1>
 
             <div class="card">
-                <h3>Add / Edit Plant Type</h3>
+                <h3>إضافة / تعديل نبات Add / Edit Plant</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Plant Name</label>
-                        <input type="text" id="plantName" placeholder="e.g. Tomato">
+                        <label>اسم النبات Plant Name</label>
+                        <input type="text" id="plantName" placeholder="مثال: طماطم">
                     </div>
                     <div class="form-group">
-                        <label>Seeding Duration (days)</label>
+                        <label>مدة البذر (أيام) Seeding Duration</label>
                         <input type="number" id="plantSeedDuration" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Growing Duration - No Nursery (days)</label>
+                        <label>مدة النمو بدون مشتل (أيام) Grow no Nursery</label>
                         <input type="number" id="plantGrowNoNursery" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Growing Duration - With Nursery (days)</label>
+                        <label>مدة النمو مع مشتل (أيام) Grow w/ Nursery</label>
                         <input type="number" id="plantGrowWithNursery" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Nursery Growing Duration (days)</label>
+                        <label>مدة النمو في المشتل (أيام) Nursery Duration</label>
                         <input type="number" id="plantNurseryDuration" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Harvesting Duration (days)</label>
+                        <label>مدة الحصاد (أيام) Harvest Duration</label>
                         <input type="number" id="plantHarvestDuration" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Initial Weight (kg)</label>
+                        <label>الوزن الابتدائي (كجم) Initial Weight</label>
                         <input type="number" id="plantInitWeight" min="0" step="0.01" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Growth Rate / Day During Harvest (%)</label>
+                        <label>معدل النمو اليومي أثناء الحصاد (%) Growth Rate</label>
                         <input type="number" id="plantGrowthRate" min="0" step="0.01" value="0">
                     </div>
                     <div class="form-group">
-                        <label>Damage Rate (%)</label>
+                        <label>نسبة التلف (%) Damage Rate</label>
                         <input type="number" id="plantDamageRate" min="0" max="100" step="0.1" value="0">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlant()">Save Plant</button>
-                    <button class="btn btn-secondary" onclick="clearPlantForm()">Clear</button>
+                    <button class="btn btn-primary" onclick="savePlant()">حفظ النبات Save</button>
+                    <button class="btn btn-secondary" onclick="clearPlantForm()">مسح Clear</button>
                 </div>
                 <input type="hidden" id="editPlantId" value="">
             </div>
 
             <div class="card">
-                <h3>Saved Plant Types</h3>
+                <h3>أنواع النباتات المحفوظة Saved Plants</h3>
                 <div style="overflow-x:auto;">
                     <table>
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Seed (d)</th>
-                                <th>Grow no N (d)</th>
-                                <th>Grow w/ N (d)</th>
-                                <th>Nursery (d)</th>
-                                <th>Harvest (d)</th>
-                                <th>Init Wt (kg)</th>
-                                <th>Rate/d (kg)</th>
-                                <th>Damage %</th>
-                                <th>Actions</th>
+                                <th>الاسم Name</th>
+                                <th>بذر Seed</th>
+                                <th>نمو بدون Grow-</th>
+                                <th>نمو مع Grow+</th>
+                                <th>مشتل Nursery</th>
+                                <th>حصاد Harvest</th>
+                                <th>وزن Init Wt</th>
+                                <th>نمو% Rate</th>
+                                <th>تلف% Dmg</th>
+                                <th>إجراءات Actions</th>
                             </tr>
                         </thead>
                         <tbody id="plantsTable"></tbody>
@@ -302,41 +302,41 @@
 
         <!-- ════ GH Assignments Page ════ -->
         <div class="page" id="page-assignments">
-            <h1>Plant to Greenhouse Assignments</h1>
+            <h1>توزيع النباتات على البيوت GH Assignments</h1>
 
             <div class="card">
-                <h3>Assign Plant to Greenhouse</h3>
+                <h3>تعيين نبات لبيت محمي Assign Plant to GH</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Plant Type</label>
+                        <label>نوع النبات Plant Type</label>
                         <select id="assignPlant"></select>
                     </div>
                     <div class="form-group">
-                        <label>Assigned Greenhouse</label>
+                        <label>البيت المحمي Greenhouse</label>
                         <select id="assignGH"></select>
                     </div>
                     <div class="form-group">
-                        <label>Target Production / Month (kg)</label>
+                        <label>الإنتاج المستهدف/شهر (كجم) Target/Month</label>
                         <input type="number" id="assignTarget" min="0" step="0.1" value="0">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="saveAssignment()">Save Assignment</button>
-                    <button class="btn btn-secondary" onclick="clearAssignmentForm()">Clear</button>
+                    <button class="btn btn-primary" onclick="saveAssignment()">حفظ التعيين Save</button>
+                    <button class="btn btn-secondary" onclick="clearAssignmentForm()">مسح Clear</button>
                 </div>
                 <input type="hidden" id="editAssignId" value="">
             </div>
 
             <div class="card">
-                <h3>Current Assignments</h3>
+                <h3>التعيينات الحالية Current Assignments</h3>
                 <div style="overflow-x:auto;">
                     <table>
                         <thead>
                             <tr>
-                                <th>Plant</th>
-                                <th>Greenhouse</th>
-                                <th>Target (kg/month)</th>
-                                <th>Actions</th>
+                                <th>النبات Plant</th>
+                                <th>البيت GH</th>
+                                <th>الهدف Target (kg/m)</th>
+                                <th>إجراءات Actions</th>
                             </tr>
                         </thead>
                         <tbody id="assignmentsTable"></tbody>
@@ -347,32 +347,32 @@
 
         <!-- ════ Planning Initialization Page ════ -->
         <div class="page" id="page-planning">
-            <h1>Planning Initialization</h1>
-            <p style="color:#777; margin-bottom:20px; font-size:14px;">Set the current state of each resource &mdash; what it is running and when it started.</p>
+            <h1>تهيئة الخطة Planning Initialization</h1>
+            <p style="color:#777; margin-bottom:20px; font-size:14px;">حدد الحالة الحالية لكل مورد &mdash; ماذا يعمل ومتى بدأ. Set current state of each resource.</p>
 
             <!-- Seeding Section — Beds only -->
             <div class="card">
-                <h3>&#127793; Seeding (Beds)</h3>
+                <h3>&#127793; البذر (الأحواض) Seeding (Beds)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Bed #</label>
+                        <label>رقم الحوض Bed #</label>
                         <select id="planSeedBed"></select>
                     </div>
                     <div class="form-group">
-                        <label>Plant Type</label>
+                        <label>نوع النبات Plant</label>
                         <select id="planSeedPlant"></select>
                     </div>
                     <div class="form-group">
-                        <label>Start Date</label>
+                        <label>تاريخ البدء Start Date</label>
                         <input type="date" id="planSeedDate">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlanSection('seeding')">Add Seeding Entry</button>
+                    <button class="btn btn-primary" onclick="savePlanSection('seeding')">إضافة بذر Add Seeding</button>
                 </div>
                 <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead><tr><th>Bed</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>الحوض Bed</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
                         <tbody id="planSeedTable"></tbody>
                     </table>
                 </div>
@@ -380,27 +380,27 @@
 
             <!-- Nursing Section — Nurseries only -->
             <div class="card">
-                <h3>&#129716; Nursing (Nurseries)</h3>
+                <h3>&#129716; التمريض (المشاتل) Nursing (Nurseries)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Nursery #</label>
+                        <label>رقم المشتل Nursery #</label>
                         <select id="planNurseryNum"></select>
                     </div>
                     <div class="form-group">
-                        <label>Plant Type</label>
+                        <label>نوع النبات Plant</label>
                         <select id="planNurseryPlant"></select>
                     </div>
                     <div class="form-group">
-                        <label>Start Date</label>
+                        <label>تاريخ البدء Start Date</label>
                         <input type="date" id="planNurseryDate">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlanSection('nursery')">Add Nursing Entry</button>
+                    <button class="btn btn-primary" onclick="savePlanSection('nursery')">إضافة تمريض Add Nursing</button>
                 </div>
                 <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead><tr><th>Nursery</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>المشتل Nursery</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
                         <tbody id="planNurseryTable"></tbody>
                     </table>
                 </div>
@@ -408,27 +408,27 @@
 
             <!-- Growing Section — Greenhouses only -->
             <div class="card">
-                <h3>&#127807; Growing (Greenhouses)</h3>
+                <h3>&#127807; النمو (البيوت المحمية) Growing (GH)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Greenhouse #</label>
+                        <label>رقم البيت GH #</label>
                         <select id="planGrowGH"></select>
                     </div>
                     <div class="form-group">
-                        <label>Plant Type</label>
+                        <label>نوع النبات Plant</label>
                         <select id="planGrowPlant"></select>
                     </div>
                     <div class="form-group">
-                        <label>Start Date</label>
+                        <label>تاريخ البدء Start Date</label>
                         <input type="date" id="planGrowDate">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlanSection('growing')">Add Growing Entry</button>
+                    <button class="btn btn-primary" onclick="savePlanSection('growing')">إضافة نمو Add Growing</button>
                 </div>
                 <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead><tr><th>Greenhouse</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>البيت GH</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
                         <tbody id="planGrowTable"></tbody>
                     </table>
                 </div>
@@ -436,27 +436,27 @@
 
             <!-- Harvesting Section — Greenhouses only -->
             <div class="card">
-                <h3>&#127813; Harvesting (Greenhouses)</h3>
+                <h3>&#127813; الحصاد (البيوت المحمية) Harvesting (GH)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Greenhouse #</label>
+                        <label>رقم البيت GH #</label>
                         <select id="planHarvestGH"></select>
                     </div>
                     <div class="form-group">
-                        <label>Plant Type</label>
+                        <label>نوع النبات Plant</label>
                         <select id="planHarvestPlant"></select>
                     </div>
                     <div class="form-group">
-                        <label>Start Date</label>
+                        <label>تاريخ البدء Start Date</label>
                         <input type="date" id="planHarvestDate">
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlanSection('harvesting')">Add Harvesting Entry</button>
+                    <button class="btn btn-primary" onclick="savePlanSection('harvesting')">إضافة حصاد Add Harvesting</button>
                 </div>
                 <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead><tr><th>Greenhouse</th><th>Plant</th><th>Start Date</th><th>Days Elapsed</th><th>Actions</th></tr></thead>
+                        <thead><tr><th>البيت GH</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
                         <tbody id="planHarvestTable"></tbody>
                     </table>
                 </div>
@@ -464,27 +464,26 @@
 
             <!-- Generate Plan -->
             <div class="card" style="border: 2px dashed #2e7d32; background: #f9fdf9;">
-                <h3>&#9889; Generate Cycle Plan (6 months)</h3>
+                <h3>&#9889; توليد خطة الدورات (6 أشهر) Generate Cycle Plan</h3>
                 <p style="color:#666; font-size:13px; margin-bottom:16px;">
-                    Based on the initialization above and GH assignments, this generates a full schedule for all beds, nurseries, and greenhouses
-                    for the next 6 months, keeping GHs fully occupied. If nurseries are busy, seedlings go directly to growing (longer duration).
+                    بناءً على التهيئة أعلاه وتوزيع البيوت، يتم توليد جدول كامل لجميع الأحواض والمشاتل والبيوت المحمية لمدة 6 أشهر، مع إبقاء البيوت مشغولة دائماً. إذا كانت المشاتل مشغولة، تنتقل الشتلات مباشرة للنمو.
                 </p>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="generateCyclePlan()" style="font-size:16px; padding:14px 32px;">Generate Plan</button>
-                    <button class="btn btn-danger" onclick="clearGeneratedPlan()">Clear Generated Plan</button>
+                    <button class="btn btn-primary" onclick="generateCyclePlan()" style="font-size:16px; padding:14px 32px;">توليد الخطة Generate</button>
+                    <button class="btn btn-danger" onclick="clearGeneratedPlan()">مسح الخطة Clear Plan</button>
                 </div>
                 <div id="generateStatus" style="margin-top:12px; font-size:13px; color:#555;"></div>
             </div>
         </div>
 
         <!-- ════ Production Page ════ -->
-        <div class="page" id="page-production">
-            <h1>Production Overview</h1>
+        <div class="page active" id="page-production">
+            <h1>نظرة عامة على الإنتاج Production Overview</h1>
 
             <div class="date-nav">
-                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&larr; Prev Day</button>
-                <button class="btn btn-primary btn-sm" onclick="prodNavToday()">Today</button>
-                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">Next Day &rarr;</button>
+                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">اليوم التالي &larr; Next</button>
+                <button class="btn btn-primary btn-sm" onclick="prodNavToday()">اليوم Today</button>
+                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&rarr; اليوم السابق Prev</button>
                 <span class="date-label" id="prodDateLabel"></span>
             </div>
 
@@ -518,7 +517,7 @@ function attemptLogin() {
         save(KEYS.auth, { loggedIn: true, ts: Date.now() });
         showApp();
     } else {
-        document.getElementById('loginError').textContent = 'Invalid code. Please try again.';
+        document.getElementById('loginError').textContent = 'رمز غير صحيح. حاول مرة أخرى. Invalid code.';
     }
 }
 document.getElementById('loginCode').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
@@ -574,7 +573,7 @@ function saveSettings() {
         nurseryCapacity: +document.getElementById('nurseryCapacity').value
     };
     save(KEYS.settings, s);
-    alert('Settings saved!');
+    alert('تم حفظ الإعدادات! Settings saved!');
 }
 function getSettings() { return load(KEYS.settings) || { ghCount: 0, ghCapacity: 0, bedCount: 0, bedCapacity: 0, nurseryCount: 0, nurseryCapacity: 0 }; }
 
@@ -1110,7 +1109,7 @@ function renderProduction() {
 
     if (!cycles.length) {
         statsDiv.innerHTML = '';
-        cyclesDiv.innerHTML = '<div class="card"><p class="empty-msg">No active cycles on this date. Initialize plans or generate a cycle plan.</p></div>';
+        cyclesDiv.innerHTML = '<div class="card"><p class="empty-msg">لا توجد دورات نشطة في هذا التاريخ. قم بتهيئة الخطة أو توليد خطة دورات.<br>No active cycles on this date.</p></div>';
         return;
     }
 
@@ -1122,12 +1121,12 @@ function renderProduction() {
     const totalSoFar = harvesting.reduce((sum, c) => sum + c.soFarKg, 0);
 
     statsDiv.innerHTML = `
-        <div class="stat-card"><div class="num">${cycles.length}</div><div class="lbl">Active Cycles</div></div>
-        <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">Harvesting</div></div>
-        <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">Growing</div></div>
-        <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">Seeding / Nursery</div></div>
-        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalToday.toFixed(1)}</div><div class="lbl">kg This Day</div></div>
-        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalSoFar.toFixed(1)}</div><div class="lbl">kg Phase Total</div></div>
+        <div class="stat-card"><div class="num">${cycles.length}</div><div class="lbl">دورات نشطة Active</div></div>
+        <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">حصاد Harvesting</div></div>
+        <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">نمو Growing</div></div>
+        <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">بذر/مشتل Seed/Nursery</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalToday.toFixed(1)}</div><div class="lbl">كجم اليوم kg Today</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalSoFar.toFixed(1)}</div><div class="lbl">كجم إجمالي kg Total</div></div>
     `;
 
     // ── Production Summary by Plant ──
@@ -1142,10 +1141,10 @@ function renderProduction() {
             byPlant[name].ghs.push(c.resLabel);
         });
         summaryHtml = `<div class="card">
-            <h3>Production Summary by Plant</h3>
+            <h3>ملخص الإنتاج حسب النبات Production by Plant</h3>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>Plant</th><th>Greenhouses</th><th>Day's Production (kg)</th><th>Phase Total (kg)</th></tr></thead>
+                    <thead><tr><th>النبات Plant</th><th>البيوت GH</th><th>إنتاج اليوم (كجم) Day</th><th>إجمالي المرحلة (كجم) Total</th></tr></thead>
                     <tbody>${Object.entries(byPlant).map(([name, d]) => `<tr>
                         <td><strong>${esc(name)}</strong></td>
                         <td>${d.ghs.join(', ')}</td>
@@ -1161,10 +1160,10 @@ function renderProduction() {
     let harvestDetailHtml = '';
     if (harvesting.length) {
         harvestDetailHtml = `<div class="card">
-            <h3>Harvesting Detail by Greenhouse</h3>
+            <h3>تفاصيل الحصاد حسب البيت Harvest by GH</h3>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>Greenhouse</th><th>Plant</th><th>Day</th><th>Day's Prod (kg)</th><th>Phase Total (kg)</th></tr></thead>
+                    <thead><tr><th>البيت GH</th><th>النبات Plant</th><th>اليوم Day</th><th>إنتاج اليوم (كجم)</th><th>إجمالي (كجم) Total</th></tr></thead>
                     <tbody>${harvesting.map(c => `<tr>
                         <td><strong>${c.resLabel}</strong></td>
                         <td>${esc(c.plant.name)}</td>
@@ -1200,6 +1199,7 @@ function loadAllData() {
     loadSettings();
     renderPlants();
     renderAssignments();
+    renderProduction();
 }
 
 // ── Init ──
