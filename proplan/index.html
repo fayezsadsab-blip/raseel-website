@@ -169,7 +169,7 @@
         <nav>
             <a href="#" data-page="production" class="active"><span class="icon">&#128200;</span><span>الإنتاج Production</span></a>
             <a href="#" data-page="planning"><span class="icon">&#128197;</span><span>تهيئة الخطة Plan Init</span></a>
-            <a href="#" data-page="assignments"><span class="icon">&#127968;</span><span>توزيع البيوت GH Assign</span></a>
+            <a href="#" data-page="assignments"><span class="icon">&#127968;</span><span>توزيع البيوت المحمية GH Assign</span></a>
             <a href="#" data-page="plants"><span class="icon">&#127793;</span><span>أنواع النبات Plants</span></a>
             <a href="#" data-page="settings"><span class="icon">&#9881;</span><span>الإعدادات Settings</span></a>
         </nav>
@@ -199,28 +199,28 @@
             </div>
 
             <div class="card">
-                <h3>أحواض البذور Seeding Beds</h3>
+                <h3>أحواض التبذير Seeding Beds</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>عدد أحواض البذور Number of Beds</label>
+                        <label>عدد أحواض التبذير Number of Beds</label>
                         <input type="number" id="bedCount" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>سعة كل حوض Capacity/Bed</label>
+                        <label>سعة كل حوض تبذير Capacity/Bed</label>
                         <input type="number" id="bedCapacity" min="0" value="0">
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>المشاتل Nurseries</h3>
+                <h3>الحاضنات Nurseries</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>عدد المشاتل Number of Nurseries</label>
+                        <label>عدد الحاضنات Number of Nurseries</label>
                         <input type="number" id="nurseryCount" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>سعة كل مشتل Capacity/Nursery</label>
+                        <label>سعة كل حاضنة Capacity/Nursery</label>
                         <input type="number" id="nurseryCapacity" min="0" value="0">
                     </div>
                 </div>
@@ -247,15 +247,15 @@
                         <input type="number" id="plantSeedDuration" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>مدة النمو بدون مشتل (أيام) Grow no Nursery</label>
+                        <label>مدة النمو بدون حاضنة (أيام) Grow no Nursery</label>
                         <input type="number" id="plantGrowNoNursery" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>مدة النمو مع مشتل (أيام) Grow w/ Nursery</label>
+                        <label>مدة النمو مع حاضنة (أيام) Grow w/ Nursery</label>
                         <input type="number" id="plantGrowWithNursery" min="0" value="0">
                     </div>
                     <div class="form-group">
-                        <label>مدة النمو في المشتل (أيام) Nursery Duration</label>
+                        <label>مدة الحضن في الحاضنة (أيام) Nursery Duration</label>
                         <input type="number" id="plantNurseryDuration" min="0" value="0">
                     </div>
                     <div class="form-group">
@@ -292,7 +292,7 @@
                                 <th>بذر Seed</th>
                                 <th>نمو بدون Grow-</th>
                                 <th>نمو مع Grow+</th>
-                                <th>مشتل Nursery</th>
+                                <th>حاضنة Nursery</th>
                                 <th>حصاد Harvest</th>
                                 <th>وزن Init Wt</th>
                                 <th>نمو% Rate</th>
@@ -308,7 +308,7 @@
 
         <!-- ════ GH Assignments Page ════ -->
         <div class="page" id="page-assignments">
-            <h1>توزيع النباتات على البيوت GH Assignments</h1>
+            <h1>توزيع النباتات على البيوت المحمية GH Assignments</h1>
 
             <div class="card">
                 <h3>تعيين نبات لبيت محمي Assign Plant to GH</h3>
@@ -358,10 +358,10 @@
 
             <!-- Seeding Section — Beds only -->
             <div class="card">
-                <h3>&#127793; البذر (الأحواض) Seeding (Beds)</h3>
+                <h3>&#127793; التبذير (أحواض التبذير) Seeding (Beds)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>رقم الحوض Bed #</label>
+                        <label>رقم حوض التبذير Bed #</label>
                         <select id="planSeedBed"></select>
                     </div>
                     <div class="form-group">
@@ -378,7 +378,7 @@
                 </div>
                 <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead><tr><th>الحوض Bed</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
+                        <thead><tr><th>حوض التبذير Bed</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
                         <tbody id="planSeedTable"></tbody>
                     </table>
                 </div>
@@ -386,10 +386,10 @@
 
             <!-- Nursing Section — Nurseries only -->
             <div class="card">
-                <h3>&#129716; التمريض (المشاتل) Nursing (Nurseries)</h3>
+                <h3>&#129716; الحضن (الحاضنات) Nursing (Nurseries)</h3>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>رقم المشتل Nursery #</label>
+                        <label>رقم الحاضنة Nursery #</label>
                         <select id="planNurseryNum"></select>
                     </div>
                     <div class="form-group">
@@ -402,11 +402,11 @@
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="savePlanSection('nursery')">إضافة تمريض Add Nursing</button>
+                    <button class="btn btn-primary" onclick="savePlanSection('nursery')">إضافة حضن Add Nursing</button>
                 </div>
                 <div style="overflow-x:auto; margin-top:16px;">
                     <table>
-                        <thead><tr><th>المشتل Nursery</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
+                        <thead><tr><th>الحاضنة Nursery</th><th>النبات Plant</th><th>البدء Start</th><th>الأيام Days</th><th>إجراءات</th></tr></thead>
                         <tbody id="planNurseryTable"></tbody>
                     </table>
                 </div>
@@ -414,7 +414,7 @@
 
             <!-- Growing Section — Greenhouses only -->
             <div class="card">
-                <h3>&#127807; النمو (البيوت المحمية) Growing (GH)</h3>
+                <h3>&#127807; النمو (البيوت المحمية) Growing (Greenhouses)</h3>
                 <div class="form-grid">
                     <div class="form-group">
                         <label>رقم البيت GH #</label>
@@ -442,7 +442,7 @@
 
             <!-- Harvesting Section — Greenhouses only -->
             <div class="card">
-                <h3>&#127813; الحصاد (البيوت المحمية) Harvesting (GH)</h3>
+                <h3>&#127813; الحصاد (البيوت المحمية) Harvesting (Greenhouses)</h3>
                 <div class="form-grid">
                     <div class="form-group">
                         <label>رقم البيت GH #</label>
@@ -472,7 +472,7 @@
             <div class="card" style="border: 2px dashed #2e7d32; background: #f9fdf9;">
                 <h3>&#9889; توليد خطة الدورات (6 أشهر) Generate Cycle Plan</h3>
                 <p style="color:#666; font-size:13px; margin-bottom:16px;">
-                    بناءً على التهيئة أعلاه وتوزيع البيوت، يتم توليد جدول كامل لجميع الأحواض والمشاتل والبيوت المحمية لمدة 6 أشهر، مع إبقاء البيوت مشغولة دائماً. إذا كانت المشاتل مشغولة، تنتقل الشتلات مباشرة للنمو.
+                    بناءً على التهيئة أعلاه وتوزيع البيوت، يتم توليد جدول كامل لجميع أحواض التبذير والحاضنات والبيوت المحمية لمدة 6 أشهر، مع إبقاء البيوت مشغولة دائماً. إذا كانت الحاضنات مشغولة، تنتقل الشتلات مباشرة للنمو.
                 </p>
                 <div class="actions">
                     <button class="btn btn-primary" onclick="generateCyclePlan()" style="font-size:16px; padding:14px 32px;">توليد الخطة Generate</button>
@@ -663,7 +663,7 @@ function refreshAssignmentDropdowns() {
     const plantSel = document.getElementById('assignPlant');
     const ghSel = document.getElementById('assignGH');
     plantSel.innerHTML = '<option value="">-- اختر نبات Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    let ghOpts = '<option value="0">بدون None (0)</option><option value="any">أي بيت Any</option>';
+    let ghOpts = '<option value="0">بدون None (0)</option><option value="any">أي بيت محمي Any</option>';
     for (let i = 1; i <= s.ghCount; i++) ghOpts += `<option value="${i}">بيت GH #${i}</option>`;
     ghSel.innerHTML = ghOpts;
 }
@@ -674,7 +674,7 @@ function renderAssignments() {
     if (!assignments.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">لا توجد تعيينات بعد No assignments yet.</td></tr>'; return; }
     tbody.innerHTML = assignments.map(a => {
         const plant = plants.find(p => p.id === a.plantId);
-        const ghLabel = a.gh === '0' ? 'بدون None' : a.gh === 'any' ? 'أي بيت Any' : `بيت GH #${a.gh}`;
+        const ghLabel = a.gh === '0' ? 'بدون None' : a.gh === 'any' ? 'أي بيت محمي Any' : `بيت GH #${a.gh}`;
         return `<tr>
             <td>${plant ? esc(plant.name) : '<em>غير معروف</em>'}</td>
             <td>${ghLabel}</td>
@@ -1168,7 +1168,7 @@ function renderProduction() {
         <div class="stat-card" style="background:linear-gradient(135deg,#e3f2fd,#bbdefb)"><div class="num" style="color:#0d47a1;font-size:28px">${planTotalKg.toFixed(1)}</div><div class="lbl">إجمالي منذ بداية الخطة (كجم)<br>Plan Total</div></div>
         <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">حصاد Harvesting</div></div>
         <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">نمو Growing</div></div>
-        <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">بذر/مشتل Seed/Nursery</div></div>
+        <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">بذر/حضن Seed/Nursery</div></div>
     `;
 
     // ── Production by Plant (with all 3 metrics) ──
@@ -1248,7 +1248,7 @@ function renderProduction() {
     const cycleCardsHtml = cycles.map(c => {
         const colors = { seeding: '#ff9800', nursery: '#9c27b0', growing: '#2196f3', harvesting: '#4caf50' };
         const srcBadge = c.source === 'generated' ? ' <span style="font-size:10px;background:#e3f2fd;color:#1565c0;padding:2px 6px;border-radius:4px;">مولّد generated</span>' : '';
-        const nurseryBadge = c.usedNursery === false && c.phase === 'growing' ? ' <span style="font-size:10px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:4px;">بدون مشتل no nursery</span>' : '';
+        const nurseryBadge = c.usedNursery === false && c.phase === 'growing' ? ' <span style="font-size:10px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:4px;">بدون حاضنة no nursery</span>' : '';
         return `<div class="cycle-card ${c.phase}">
             <div class="label ${c.phase}">${phaseName(c.phase)}${srcBadge}${nurseryBadge}</div>
             <div class="info">${c.resLabel} &mdash; ${esc(c.plant.name)}</div>
@@ -1262,10 +1262,10 @@ function renderProduction() {
 
 // ── Helpers ──
 function esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-const phaseAr = { seeding: 'بذر', nursery: 'تمريض', growing: 'نمو', harvesting: 'حصاد' };
+const phaseAr = { seeding: 'بذر', nursery: 'حضن', growing: 'نمو', harvesting: 'حصاد' };
 function phaseName(p) { return (phaseAr[p] || p) + ' ' + p; }
 function resName(type, num) {
-    const names = { gh: 'بيت GH', nursery: 'مشتل Nursery', bed: 'حوض Bed' };
+    const names = { gh: 'بيت محمي GH', nursery: 'حاضنة Nursery', bed: 'حوض تبذير Bed' };
     return (names[type] || type) + ' #' + num;
 }
 
