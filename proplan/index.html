@@ -1079,15 +1079,20 @@ function renderProduction() {
         const resLabel = (item.resType === 'gh' ? 'GH' : item.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + item.resNum;
 
         let todayKg = 0, soFarKg = 0;
-        if (item.phase === 'harvesting') {
-            // Weight per plant on day N = initWeight * (1 + rate%)^N
-            const weightPerPlant = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed);
-            // Total production = full weight of all plants after damage
-            soFarKg = weightPerPlant * s.ghCapacity * (1 - plant.damageRate / 100);
-            if (daysElapsed > 0) {
-                // Daily gain = today's total - yesterday's total
-                const yesterdayWeight = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed - 1);
-                todayKg = (weightPerPlant - yesterdayWeight) * s.ghCapacity * (1 - plant.damageRate / 100);
+        if (item.phase === 'harvesting' && plant.harvestDuration > 0) {
+            // Spread harvest evenly: pick (capacity / harvestDays) plants per day
+            // Plants picked on day N have grown N days, so they weigh: initWeight * (1 + rate%)^N
+            const plantsPerDay = s.ghCapacity / plant.harvestDuration;
+            const dmg = 1 - plant.damageRate / 100;
+            const rate = 1 + plant.growthRate / 100;
+            // Today's harvest
+            if (daysElapsed < plant.harvestDuration) {
+                todayKg = plantsPerDay * plant.initWeight * Math.pow(rate, daysElapsed) * dmg;
+            }
+            // Cumulative: sum of daily harvests from day 0 to current day
+            const maxDay = Math.min(daysElapsed, plant.harvestDuration - 1);
+            for (let d = 0; d <= maxDay; d++) {
+                soFarKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
             }
         }
 
