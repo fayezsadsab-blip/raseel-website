@@ -123,10 +123,16 @@
 
         /* ── Date Navigation ── */
         .date-nav {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+            display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+            position: sticky; top: 0; z-index: 50; background: #f0f2f5; padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0; flex-wrap: nowrap;
         }
         .date-nav .date-label {
-            font-size: 16px; font-weight: 700; color: #1a472a; margin-left: 12px;
+            font-size: 15px; font-weight: 700; color: #1a472a; margin-right: 12px; white-space: nowrap;
+        }
+        .date-nav input[type="date"] {
+            padding: 6px 10px; border: 1.5px solid #2e7d32; border-radius: 8px; font-size: 13px;
+            font-family: inherit; color: #1a472a; font-weight: 600; cursor: pointer; background: #fff;
         }
 
         /* ── Responsive ── */
@@ -481,10 +487,11 @@
             <h1>نظرة عامة على الإنتاج Production Overview</h1>
 
             <div class="date-nav">
-                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">اليوم التالي &larr; Next</button>
+                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">&rarr; التالي</button>
                 <button class="btn btn-primary btn-sm" onclick="prodNavToday()">اليوم Today</button>
-                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&rarr; اليوم السابق Prev</button>
+                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">السابق &larr;</button>
                 <span class="date-label" id="prodDateLabel"></span>
+                <input type="date" id="prodDatePicker" onchange="prodNavJump(this.value)" title="اختر تاريخ Jump to date">
             </div>
 
             <div class="stat-grid" id="productionStats"></div>
@@ -1005,13 +1012,27 @@ function prodNavDay(delta) {
     const today = new Date(); today.setHours(0,0,0,0);
     const maxDate = addDays(today, 180);
     const newDate = addDays(prodViewDate, delta);
-    if (newDate > maxDate || newDate < addDays(today, -30)) return; // limit range
+    if (newDate > maxDate || newDate < addDays(today, -30)) return;
     prodViewDate = newDate;
+    syncDatePicker();
     renderProduction();
 }
 function prodNavToday() {
     prodViewDate = new Date(); prodViewDate.setHours(0,0,0,0);
+    syncDatePicker();
     renderProduction();
+}
+function prodNavJump(val) {
+    if (!val) return;
+    const d = new Date(val); d.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (d > addDays(today, 180) || d < addDays(today, -30)) return;
+    prodViewDate = d;
+    renderProduction();
+}
+function syncDatePicker() {
+    const picker = document.getElementById('prodDatePicker');
+    if (picker) picker.value = dateStr(prodViewDate);
 }
 
 function renderProduction() {
@@ -1026,7 +1047,8 @@ function renderProduction() {
     const isToday = dateStr(viewDate) === dateStr(today);
 
     // Show current date
-    document.getElementById('prodDateLabel').textContent = viewDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + (isToday ? ' (Today)' : '');
+    document.getElementById('prodDateLabel').textContent = viewDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + (isToday ? ' (اليوم)' : '');
+    syncDatePicker();
 
     // Combine init entries as schedule items + generated items
     // Init entries: expand them into schedule-like objects
