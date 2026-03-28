@@ -589,7 +589,7 @@ function getPlants() { return load(KEYS.plants) || []; }
 function renderPlants() {
     const plants = getPlants();
     const tbody = document.getElementById('plantsTable');
-    if (!plants.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-msg">No plant types defined yet.</td></tr>'; return; }
+    if (!plants.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-msg">لا توجد أنواع نباتات بعد No plants defined yet.</td></tr>'; return; }
     tbody.innerHTML = plants.map(p => `<tr>
         <td><strong>${esc(p.name)}</strong></td>
         <td>${p.seedDuration}</td>
@@ -601,14 +601,14 @@ function renderPlants() {
         <td>${p.growthRate}%</td>
         <td>${p.damageRate}%</td>
         <td>
-            <button class="btn btn-sm btn-secondary" onclick="editPlant('${p.id}')">Edit</button>
-            <button class="btn btn-sm btn-danger" onclick="deletePlant('${p.id}')">Del</button>
+            <button class="btn btn-sm btn-secondary" onclick="editPlant('${p.id}')">تعديل</button>
+            <button class="btn btn-sm btn-danger" onclick="deletePlant('${p.id}')">حذف</button>
         </td>
     </tr>`).join('');
 }
 function savePlant() {
     const name = document.getElementById('plantName').value.trim();
-    if (!name) { alert('Plant name is required.'); return; }
+    if (!name) { alert('اسم النبات مطلوب Plant name required.'); return; }
     const plant = {
         id: document.getElementById('editPlantId').value || genId(),
         name,
@@ -643,7 +643,7 @@ function editPlant(id) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function deletePlant(id) {
-    if (!confirm('Delete this plant type?')) return;
+    if (!confirm('حذف هذا النبات؟ Delete this plant?')) return;
     save(KEYS.plants, getPlants().filter(p => p.id !== id));
     renderPlants();
 }
@@ -662,33 +662,33 @@ function refreshAssignmentDropdowns() {
     const s = getSettings();
     const plantSel = document.getElementById('assignPlant');
     const ghSel = document.getElementById('assignGH');
-    plantSel.innerHTML = '<option value="">-- Select Plant --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    let ghOpts = '<option value="0">None (0)</option><option value="any">Any</option>';
-    for (let i = 1; i <= s.ghCount; i++) ghOpts += `<option value="${i}">GH #${i}</option>`;
+    plantSel.innerHTML = '<option value="">-- اختر نبات Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    let ghOpts = '<option value="0">بدون None (0)</option><option value="any">أي بيت Any</option>';
+    for (let i = 1; i <= s.ghCount; i++) ghOpts += `<option value="${i}">بيت GH #${i}</option>`;
     ghSel.innerHTML = ghOpts;
 }
 function renderAssignments() {
     const assignments = getAssignments();
     const plants = getPlants();
     const tbody = document.getElementById('assignmentsTable');
-    if (!assignments.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">No assignments yet.</td></tr>'; return; }
+    if (!assignments.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty-msg">لا توجد تعيينات بعد No assignments yet.</td></tr>'; return; }
     tbody.innerHTML = assignments.map(a => {
         const plant = plants.find(p => p.id === a.plantId);
-        const ghLabel = a.gh === '0' ? 'None' : a.gh === 'any' ? 'Any GH' : `GH #${a.gh}`;
+        const ghLabel = a.gh === '0' ? 'بدون None' : a.gh === 'any' ? 'أي بيت Any' : `بيت GH #${a.gh}`;
         return `<tr>
-            <td>${plant ? esc(plant.name) : '<em>Unknown</em>'}</td>
+            <td>${plant ? esc(plant.name) : '<em>غير معروف</em>'}</td>
             <td>${ghLabel}</td>
             <td>${a.targetPerMonth}</td>
             <td>
-                <button class="btn btn-sm btn-secondary" onclick="editAssignment('${a.id}')">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteAssignment('${a.id}')">Del</button>
+                <button class="btn btn-sm btn-secondary" onclick="editAssignment('${a.id}')">تعديل</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteAssignment('${a.id}')">حذف</button>
             </td>
         </tr>`;
     }).join('');
 }
 function saveAssignment() {
     const plantId = document.getElementById('assignPlant').value;
-    if (!plantId) { alert('Select a plant.'); return; }
+    if (!plantId) { alert('اختر نبات Select a plant.'); return; }
     const a = {
         id: document.getElementById('editAssignId').value || genId(),
         plantId,
@@ -712,7 +712,7 @@ function editAssignment(id) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function deleteAssignment(id) {
-    if (!confirm('Delete this assignment?')) return;
+    if (!confirm('حذف هذا التعيين؟ Delete assignment?')) return;
     save(KEYS.assignments, getAssignments().filter(a => a.id !== id));
     renderAssignments();
 }
@@ -729,11 +729,11 @@ function getPlanEntries() { return load(KEYS.planning) || []; }
 function fillResourceSelect(sel, count, label) {
     sel.innerHTML = '';
     for (let i = 1; i <= count; i++) sel.innerHTML += `<option value="${i}">${label} #${i}</option>`;
-    if (!count) sel.innerHTML = '<option value="">None configured</option>';
+    if (!count) sel.innerHTML = '<option value="">غير مهيأ Not configured</option>';
 }
 function fillPlantSelect(sel) {
     const plants = getPlants();
-    sel.innerHTML = '<option value="">-- Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    sel.innerHTML = '<option value="">-- اختر Select --</option>' + plants.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
 function refreshPlanDropdowns() {
     const s = getSettings();
@@ -770,16 +770,16 @@ function renderPlanning() {
     for (const [phase, cfg] of Object.entries(sectionConfig)) {
         const tbody = document.getElementById(cfg.tableId);
         const phaseEntries = entries.filter(e => e.phase === phase);
-        if (!phaseEntries.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">No entries.</td></tr>`; continue; }
+        if (!phaseEntries.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">لا توجد إدخالات No entries.</td></tr>`; continue; }
         tbody.innerHTML = phaseEntries.map(e => {
             const plant = plants.find(p => p.id === e.plantId);
             const days = Math.floor((now - new Date(e.startDate)) / 86400000);
             return `<tr>
-                <td>${cfg.label} #${e.resNum}</td>
-                <td>${plant ? esc(plant.name) : 'Unknown'}</td>
+                <td>${resName(e.resType, e.resNum)}</td>
+                <td>${plant ? esc(plant.name) : 'غير معروف'}</td>
                 <td>${e.startDate}</td>
-                <td>${days} days</td>
-                <td><button class="btn btn-sm btn-danger" onclick="deletePlanEntry('${e.id}')">Del</button></td>
+                <td>${days} يوم</td>
+                <td><button class="btn btn-sm btn-danger" onclick="deletePlanEntry('${e.id}')">حذف</button></td>
             </tr>`;
         }).join('');
     }
@@ -790,7 +790,7 @@ function savePlanSection(phase) {
     const plantId = document.getElementById(cfg.plantId).value;
     const resNum = document.getElementById(cfg.resId).value;
     const startDate = document.getElementById(cfg.dateId).value;
-    if (!plantId || !resNum || !startDate) { alert('Fill all fields.'); return; }
+    if (!plantId || !resNum || !startDate) { alert('املأ جميع الحقول Fill all fields.'); return; }
     const entry = { id: genId(), resType: cfg.resType, resNum, plantId, phase, startDate };
     const list = getPlanEntries();
     list.push(entry);
@@ -799,7 +799,7 @@ function savePlanSection(phase) {
 }
 
 function deletePlanEntry(id) {
-    if (!confirm('Remove this entry?')) return;
+    if (!confirm('حذف هذا الإدخال؟ Remove entry?')) return;
     save(KEYS.planning, getPlanEntries().filter(e => e.id !== id));
     renderPlanning();
 }
@@ -817,7 +817,7 @@ function generateCyclePlan() {
     const statusDiv = document.getElementById('generateStatus');
 
     if (!s.ghCount || !plants.length || !assignments.length) {
-        statusDiv.innerHTML = '<span style="color:#d32f2f">Need settings, plants, and GH assignments first.</span>';
+        statusDiv.innerHTML = '<span style="color:#d32f2f">يجب إعداد الإعدادات والنباتات وتوزيع البيوت أولاً. Need settings, plants, and GH assignments first.</span>';
         return;
     }
 
@@ -995,13 +995,13 @@ function generateCyclePlan() {
     // Convert dates to strings for storage
     const stored = schedule.map(s => ({ ...s, start: dateStr(s.start), end: dateStr(s.end) }));
     save(KEYS.generated, stored);
-    statusDiv.innerHTML = `<span style="color:#2e7d32;font-weight:600">Plan generated: ${stored.length} scheduled phases across ${HORIZON} days.</span>`;
+    statusDiv.innerHTML = `<span style="color:#2e7d32;font-weight:600">تم توليد الخطة: ${stored.length} مرحلة مجدولة خلال ${HORIZON} يوم. Plan generated.</span>`;
 }
 
 function clearGeneratedPlan() {
-    if (!confirm('Clear the generated plan?')) return;
+    if (!confirm('مسح الخطة المولدة؟ Clear generated plan?')) return;
     localStorage.removeItem(KEYS.generated);
-    document.getElementById('generateStatus').innerHTML = '<span style="color:#999">Plan cleared.</span>';
+    document.getElementById('generateStatus').innerHTML = '<span style="color:#999">تم مسح الخطة. Plan cleared.</span>';
 }
 
 // ── Production Overview with Date Navigation ──
@@ -1097,7 +1097,7 @@ function renderProduction() {
         const phaseDuration = daysBetween(start, end);
         const progress = phaseDuration > 0 ? Math.min(100, Math.round((daysElapsed / phaseDuration) * 100)) : 0;
         const daysRemaining = Math.max(0, phaseDuration - daysElapsed);
-        const resLabel = (item.resType === 'gh' ? 'GH' : item.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + item.resNum;
+        const resLabel = resName(item.resType, item.resNum);
 
         let todayKg = 0, soFarKg = 0;
         if (item.phase === 'harvesting' && plant.harvestDuration > 0) {
@@ -1247,10 +1247,10 @@ function renderProduction() {
     // ── All Cycle Cards ──
     const cycleCardsHtml = cycles.map(c => {
         const colors = { seeding: '#ff9800', nursery: '#9c27b0', growing: '#2196f3', harvesting: '#4caf50' };
-        const srcBadge = c.source === 'generated' ? ' <span style="font-size:10px;background:#e3f2fd;color:#1565c0;padding:2px 6px;border-radius:4px;">generated</span>' : '';
-        const nurseryBadge = c.usedNursery === false && c.phase === 'growing' ? ' <span style="font-size:10px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:4px;">no nursery</span>' : '';
+        const srcBadge = c.source === 'generated' ? ' <span style="font-size:10px;background:#e3f2fd;color:#1565c0;padding:2px 6px;border-radius:4px;">مولّد generated</span>' : '';
+        const nurseryBadge = c.usedNursery === false && c.phase === 'growing' ? ' <span style="font-size:10px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:4px;">بدون مشتل no nursery</span>' : '';
         return `<div class="cycle-card ${c.phase}">
-            <div class="label ${c.phase}">${c.phase}${srcBadge}${nurseryBadge}</div>
+            <div class="label ${c.phase}">${phaseName(c.phase)}${srcBadge}${nurseryBadge}</div>
             <div class="info">${c.resLabel} &mdash; ${esc(c.plant.name)}</div>
             <div class="detail">يوم Day ${c.daysElapsed + 1} / ${c.phaseDuration} &bull; متبقي ${c.daysRemaining} أيام remaining &bull; ${c.progress}%</div>
             <div class="progress-bar"><div class="fill" style="width:${c.progress}%;background:${colors[c.phase]}"></div></div>
@@ -1262,6 +1262,12 @@ function renderProduction() {
 
 // ── Helpers ──
 function esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+const phaseAr = { seeding: 'بذر', nursery: 'تمريض', growing: 'نمو', harvesting: 'حصاد' };
+function phaseName(p) { return (phaseAr[p] || p) + ' ' + p; }
+function resName(type, num) {
+    const names = { gh: 'بيت GH', nursery: 'مشتل Nursery', bed: 'حوض Bed' };
+    return (names[type] || type) + ' #' + num;
+}
 
 function loadAllData() {
     loadSettings();
