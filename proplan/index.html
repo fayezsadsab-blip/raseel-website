@@ -1113,57 +1113,103 @@ function renderProduction() {
         return;
     }
 
+    // ── Calculate "since plan start" production: all completed + current harvesting phases up to viewDate ──
+    const allHarvestItems = allSchedule.filter(item => item.phase === 'harvesting');
+    let planTotalKg = 0;
+    allHarvestItems.forEach(item => {
+        const plant = plants.find(p => p.id === item.plantId);
+        if (!plant || plant.harvestDuration <= 0) return;
+        const itemStart = new Date(item.start); itemStart.setHours(0,0,0,0);
+        const itemEnd = new Date(item.end); itemEnd.setHours(0,0,0,0);
+        if (itemStart > viewDate) return; // hasn't started yet
+        const plantsPerDay = s.ghCapacity / plant.harvestDuration;
+        const dmg = 1 - plant.damageRate / 100;
+        const rate = 1 + plant.growthRate / 100;
+        const elapsed = Math.max(0, daysBetween(itemStart, viewDate > itemEnd ? itemEnd : viewDate));
+        const maxDay = Math.min(elapsed, plant.harvestDuration - 1);
+        for (let d = 0; d <= maxDay; d++) {
+            planTotalKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
+        }
+    });
+
     const harvesting = cycles.filter(c => c.phase === 'harvesting');
     const growing = cycles.filter(c => c.phase === 'growing');
     const seeding = cycles.filter(c => c.phase === 'seeding');
     const nurseryC = cycles.filter(c => c.phase === 'nursery');
     const totalToday = harvesting.reduce((sum, c) => sum + c.todayKg, 0);
-    const totalSoFar = harvesting.reduce((sum, c) => sum + c.soFarKg, 0);
+    const totalCycleSoFar = harvesting.reduce((sum, c) => sum + c.soFarKg, 0);
 
+    // ── Production-first stats ──
     statsDiv.innerHTML = `
-        <div class="stat-card"><div class="num">${cycles.length}</div><div class="lbl">دورات نشطة Active</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32;font-size:28px">${totalToday.toFixed(1)}</div><div class="lbl">إنتاج اليوم (كجم)<br>Today's Production</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#1565c0;font-size:28px">${totalCycleSoFar.toFixed(1)}</div><div class="lbl">إنتاج الدورة الحالية (كجم)<br>Current Cycle So Far</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e3f2fd,#bbdefb)"><div class="num" style="color:#0d47a1;font-size:28px">${planTotalKg.toFixed(1)}</div><div class="lbl">إجمالي منذ بداية الخطة (كجم)<br>Plan Total</div></div>
         <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">حصاد Harvesting</div></div>
         <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">نمو Growing</div></div>
         <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">بذر/مشتل Seed/Nursery</div></div>
-        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalToday.toFixed(1)}</div><div class="lbl">كجم اليوم kg Today</div></div>
-        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalSoFar.toFixed(1)}</div><div class="lbl">كجم إجمالي kg Total</div></div>
     `;
 
-    // ── Production Summary by Plant ──
+    // ── Production by Plant (with all 3 metrics) ──
     let summaryHtml = '';
     if (harvesting.length) {
+        // Per-plant: today, cycle so far
         const byPlant = {};
         harvesting.forEach(c => {
             const name = c.plant.name;
-            if (!byPlant[name]) byPlant[name] = { todayKg: 0, soFarKg: 0, ghs: [] };
+            if (!byPlant[name]) byPlant[name] = { todayKg: 0, cycleSoFarKg: 0, planTotalKg: 0, ghs: [] };
             byPlant[name].todayKg += c.todayKg;
-            byPlant[name].soFarKg += c.soFarKg;
+            byPlant[name].cycleSoFarKg += c.soFarKg;
             byPlant[name].ghs.push(c.resLabel);
         });
+        // Per-plant plan total: sum all completed + current harvest phases for each plant
+        allHarvestItems.forEach(item => {
+            const plant = plants.find(p => p.id === item.plantId);
+            if (!plant || plant.harvestDuration <= 0) return;
+            const name = plant.name;
+            if (!byPlant[name]) return; // only for plants currently harvesting
+            const itemStart = new Date(item.start); itemStart.setHours(0,0,0,0);
+            const itemEnd = new Date(item.end); itemEnd.setHours(0,0,0,0);
+            if (itemStart > viewDate) return;
+            const plantsPerDay = s.ghCapacity / plant.harvestDuration;
+            const dmg = 1 - plant.damageRate / 100;
+            const rate = 1 + plant.growthRate / 100;
+            const elapsed = Math.max(0, daysBetween(itemStart, viewDate > itemEnd ? itemEnd : viewDate));
+            const maxDay = Math.min(elapsed, plant.harvestDuration - 1);
+            for (let d = 0; d <= maxDay; d++) {
+                byPlant[name].planTotalKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
+            }
+        });
         summaryHtml = `<div class="card">
-            <h3>ملخص الإنتاج حسب النبات Production by Plant</h3>
+            <h3>&#127813; الإنتاج حسب النبات Production by Plant</h3>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>النبات Plant</th><th>البيوت GH</th><th>إنتاج اليوم (كجم) Day</th><th>إجمالي المرحلة (كجم) Total</th></tr></thead>
+                    <thead><tr><th>النبات Plant</th><th>البيوت GH</th><th>اليوم Today (kg)</th><th>الدورة Cycle (kg)</th><th>إجمالي الخطة Plan (kg)</th></tr></thead>
                     <tbody>${Object.entries(byPlant).map(([name, d]) => `<tr>
                         <td><strong>${esc(name)}</strong></td>
                         <td>${d.ghs.join(', ')}</td>
                         <td style="color:#2e7d32;font-weight:600">${d.todayKg.toFixed(1)}</td>
-                        <td style="color:#1565c0;font-weight:600">${d.soFarKg.toFixed(1)}</td>
-                    </tr>`).join('')}</tbody>
+                        <td style="color:#1565c0;font-weight:600">${d.cycleSoFarKg.toFixed(1)}</td>
+                        <td style="color:#0d47a1;font-weight:600">${d.planTotalKg.toFixed(1)}</td>
+                    </tr>`).join('')}
+                    <tr style="border-top:2px solid #2e7d32;font-weight:700">
+                        <td>الإجمالي Total</td><td></td>
+                        <td style="color:#2e7d32">${totalToday.toFixed(1)}</td>
+                        <td style="color:#1565c0">${totalCycleSoFar.toFixed(1)}</td>
+                        <td style="color:#0d47a1">${planTotalKg.toFixed(1)}</td>
+                    </tr></tbody>
                 </table>
             </div>
         </div>`;
     }
 
-    // ── Per-GH Harvesting Detail ──
+    // ── Harvesting Detail by GH ──
     let harvestDetailHtml = '';
     if (harvesting.length) {
         harvestDetailHtml = `<div class="card">
-            <h3>تفاصيل الحصاد حسب البيت Harvest by GH</h3>
+            <h3>&#127968; تفاصيل الحصاد حسب البيت Harvest by GH</h3>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>البيت GH</th><th>النبات Plant</th><th>اليوم Day</th><th>إنتاج اليوم (كجم)</th><th>إجمالي (كجم) Total</th></tr></thead>
+                    <thead><tr><th>البيت GH</th><th>النبات Plant</th><th>اليوم Day</th><th>إنتاج اليوم Today (kg)</th><th>إجمالي الدورة Cycle (kg)</th></tr></thead>
                     <tbody>${harvesting.map(c => `<tr>
                         <td><strong>${c.resLabel}</strong></td>
                         <td>${esc(c.plant.name)}</td>
