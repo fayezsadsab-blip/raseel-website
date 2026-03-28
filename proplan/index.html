@@ -1167,7 +1167,7 @@ function renderProduction() {
                     <tbody>${harvesting.map(c => `<tr>
                         <td><strong>${c.resLabel}</strong></td>
                         <td>${esc(c.plant.name)}</td>
-                        <td>${c.daysElapsed} of ${c.phaseDuration}</td>
+                        <td>${c.daysElapsed + 1} / ${c.phaseDuration}</td>
                         <td style="color:#2e7d32;font-weight:600">${c.todayKg.toFixed(1)}</td>
                         <td style="color:#1565c0;font-weight:600">${c.soFarKg.toFixed(1)}</td>
                     </tr>`).join('')}</tbody>
@@ -1184,7 +1184,7 @@ function renderProduction() {
         return `<div class="cycle-card ${c.phase}">
             <div class="label ${c.phase}">${c.phase}${srcBadge}${nurseryBadge}</div>
             <div class="info">${c.resLabel} &mdash; ${esc(c.plant.name)}</div>
-            <div class="detail">Day ${c.daysElapsed} of ${c.phaseDuration} &bull; ${c.daysRemaining} days remaining &bull; ${c.progress}% complete</div>
+            <div class="detail">يوم Day ${c.daysElapsed + 1} / ${c.phaseDuration} &bull; متبقي ${c.daysRemaining} أيام remaining &bull; ${c.progress}%</div>
             <div class="progress-bar"><div class="fill" style="width:${c.progress}%;background:${colors[c.phase]}"></div></div>
         </div>`;
     }).join('');
