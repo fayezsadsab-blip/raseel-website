@@ -121,6 +121,14 @@
         .stat-card .num { font-size: 32px; font-weight: 700; color: #2e7d32; }
         .stat-card .lbl { font-size: 12px; color: #777; margin-top: 4px; }
 
+        /* ── Date Navigation ── */
+        .date-nav {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .date-nav .date-label {
+            font-size: 16px; font-weight: 700; color: #1a472a; margin-left: 12px;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             .sidebar { width: 60px; }
@@ -453,11 +461,32 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Generate Plan -->
+            <div class="card" style="border: 2px dashed #2e7d32; background: #f9fdf9;">
+                <h3>&#9889; Generate Cycle Plan (6 months)</h3>
+                <p style="color:#666; font-size:13px; margin-bottom:16px;">
+                    Based on the initialization above and GH assignments, this generates a full schedule for all beds, nurseries, and greenhouses
+                    for the next 6 months, keeping GHs fully occupied. If nurseries are busy, seedlings go directly to growing (longer duration).
+                </p>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="generateCyclePlan()" style="font-size:16px; padding:14px 32px;">Generate Plan</button>
+                    <button class="btn btn-danger" onclick="clearGeneratedPlan()">Clear Generated Plan</button>
+                </div>
+                <div id="generateStatus" style="margin-top:12px; font-size:13px; color:#555;"></div>
+            </div>
         </div>
 
         <!-- ════ Production Page ════ -->
         <div class="page" id="page-production">
             <h1>Production Overview</h1>
+
+            <div class="date-nav">
+                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&larr; Prev Day</button>
+                <button class="btn btn-primary btn-sm" onclick="prodNavToday()">Today</button>
+                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">Next Day &rarr;</button>
+                <span class="date-label" id="prodDateLabel"></span>
+            </div>
 
             <div class="stat-grid" id="productionStats"></div>
 
@@ -473,7 +502,8 @@ const KEYS = {
     settings: 'raseel_settings',
     plants: 'raseel_plants',
     assignments: 'raseel_assignments',
-    planning: 'raseel_planning'
+    planning: 'raseel_planning',
+    generated: 'raseel_generated'
 };
 const ACCESS_CODE = '1234';
 
@@ -768,55 +798,312 @@ function deletePlanEntry(id) {
     renderPlanning();
 }
 
-// ── Production Overview ──
-function renderProduction() {
-    const entries = getPlanEntries();
-    const plants = getPlants();
-    const s = getSettings();
-    const now = new Date();
-    const statsDiv = document.getElementById('productionStats');
-    const cyclesDiv = document.getElementById('productionCycles');
+// ── Cycle Plan Generation ──
+function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+function daysBetween(a, b) { return Math.floor((b - a) / 86400000); }
+function dateStr(d) { return d.toISOString().split('T')[0]; }
 
-    if (!entries.length) {
-        statsDiv.innerHTML = '';
-        cyclesDiv.innerHTML = '<div class="card"><p class="empty-msg">No cycles initialized. Go to Planning Init to set up current cycles.</p></div>';
+function generateCyclePlan() {
+    const s = getSettings();
+    const plants = getPlants();
+    const assignments = getAssignments();
+    const initEntries = getPlanEntries();
+    const statusDiv = document.getElementById('generateStatus');
+
+    if (!s.ghCount || !plants.length || !assignments.length) {
+        statusDiv.innerHTML = '<span style="color:#d32f2f">Need settings, plants, and GH assignments first.</span>';
         return;
     }
 
-    // Build cycle info for each entry
-    const cycles = entries.map(e => {
+    const HORIZON = 180; // 6 months
+    const today = new Date(); today.setHours(0,0,0,0);
+    const endDate = addDays(today, HORIZON);
+
+    // Timeline trackers: when each resource becomes free
+    // Key: "bed-1", "nursery-2", "gh-3" → array of {start, end, plantId, phase, usedNursery}
+    const schedule = [];
+
+    // Build resource busy intervals from init entries
+    function initResourceTimeline() {
+        const timelines = {};
+        for (let i = 1; i <= s.bedCount; i++) timelines['bed-' + i] = [];
+        for (let i = 1; i <= s.nurseryCount; i++) timelines['nursery-' + i] = [];
+        for (let i = 1; i <= s.ghCount; i++) timelines['gh-' + i] = [];
+
+        // Populate from init entries — each init entry occupies the resource for the remaining duration of its phase
+        initEntries.forEach(e => {
+            const plant = plants.find(p => p.id === e.plantId);
+            if (!plant) return;
+            const start = new Date(e.startDate); start.setHours(0,0,0,0);
+            let dur = 0;
+            if (e.phase === 'seeding') dur = plant.seedDuration;
+            else if (e.phase === 'nursery') dur = plant.nurseryDuration;
+            else if (e.phase === 'growing') dur = plant.growWithNursery || plant.growNoNursery;
+            else if (e.phase === 'harvesting') dur = plant.harvestDuration;
+            const end = addDays(start, dur);
+            const key = e.resType + '-' + e.resNum;
+            if (timelines[key]) {
+                timelines[key].push({ start, end, plantId: e.plantId, phase: e.phase, usedNursery: e.phase === 'growing' && plant.growWithNursery > 0 });
+            }
+            // Also schedule the subsequent phases for this GH init entry
+            // e.g., if GH is in "growing", it will then go to "harvesting"
+            if (e.resType === 'gh') {
+                let nextStart = end;
+                const phases = ['growing', 'harvesting'];
+                let idx = phases.indexOf(e.phase);
+                const usedNursery = e.phase === 'growing' ? (plant.growWithNursery > 0) : true;
+                while (++idx < phases.length && nextStart < endDate) {
+                    let pDur = 0;
+                    if (phases[idx] === 'harvesting') pDur = plant.harvestDuration;
+                    const pEnd = addDays(nextStart, pDur);
+                    timelines[key].push({ start: nextStart, end: pEnd, plantId: e.plantId, phase: phases[idx], usedNursery });
+                    nextStart = pEnd;
+                }
+            }
+        });
+        return timelines;
+    }
+
+    const timelines = initResourceTimeline();
+
+    function getResourceFreeDate(key) {
+        const slots = timelines[key];
+        if (!slots || !slots.length) return today;
+        return new Date(Math.max(...slots.map(s => s.end.getTime())));
+    }
+
+    function isResourceBusyOn(key, date) {
+        const slots = timelines[key];
+        if (!slots) return false;
+        return slots.some(s => date >= s.start && date < s.end);
+    }
+
+    function findFreeResource(type, count, onDate) {
+        for (let i = 1; i <= count; i++) {
+            const key = type + '-' + i;
+            if (!isResourceBusyOn(key, onDate)) return i;
+        }
+        return null;
+    }
+
+    function findNurseryFreeOn(date, duration) {
+        for (let i = 1; i <= s.nurseryCount; i++) {
+            const key = 'nursery-' + i;
+            let free = true;
+            // Check the full duration window
+            for (let d = 0; d < duration; d++) {
+                if (isResourceBusyOn(key, addDays(date, d))) { free = false; break; }
+            }
+            if (free) return i;
+        }
+        return null;
+    }
+
+    // For each GH, when it becomes free, schedule the next full cycle using assignments
+    // Build a queue of GH free dates and fill them
+    for (let ghNum = 1; ghNum <= s.ghCount; ghNum++) {
+        const ghKey = 'gh-' + ghNum;
+        let cycleStart = getResourceFreeDate(ghKey);
+        let safetyCounter = 0;
+
+        while (cycleStart < endDate && safetyCounter++ < 50) {
+            // Find which plant is assigned to this GH
+            const ghAssignments = assignments.filter(a => a.gh === String(ghNum) || a.gh === 'any');
+            if (!ghAssignments.length) break;
+
+            // Pick first assignment (could be round-robin, but simple for now)
+            const assign = ghAssignments[safetyCounter % ghAssignments.length];
+            const plant = plants.find(p => p.id === assign.plantId);
+            if (!plant) break;
+
+            // Phase 1: Seeding — find a free bed
+            let seedStart = cycleStart;
+            // We need to start seeding early enough so that the plant is ready when GH is free
+            // Total pre-GH time: seedDuration + (nurseryDuration or 0)
+            // So seed must start at: ghFreeDate - growDuration... wait, seeding happens before GH
+            // The GH needs the plant AFTER seeding+nursery. So:
+            // seedStart should be timed so that seedEnd + nurseryEnd = ghAvailableDate
+            // But we schedule forward from when GH is free, meaning we need seeding to START before GH is free
+
+            // Forward scheduling: seed now, then nursery, then grow in GH, then harvest in GH
+            // Find free bed for seeding
+            let bedNum = null;
+            let actualSeedStart = new Date(Math.max(cycleStart.getTime() - (plant.seedDuration + plant.nurseryDuration) * 86400000, today.getTime()));
+            // Try to find a bed free at actualSeedStart, scanning forward if needed
+            for (let tryDay = 0; tryDay < 60; tryDay++) {
+                const tryDate = addDays(actualSeedStart, tryDay);
+                bedNum = findFreeResource('bed', s.bedCount, tryDate);
+                if (bedNum) { actualSeedStart = tryDate; break; }
+            }
+            if (!bedNum && s.bedCount > 0) { cycleStart = addDays(cycleStart, 1); continue; }
+
+            const seedEnd = addDays(actualSeedStart, plant.seedDuration);
+
+            // Phase 2: Nursery — check if any nursery is free for the full duration
+            let nurseryNum = null;
+            let usedNursery = false;
+            let nurseryEnd = seedEnd;
+            if (plant.nurseryDuration > 0 && s.nurseryCount > 0) {
+                nurseryNum = findNurseryFreeOn(seedEnd, plant.nurseryDuration);
+                if (nurseryNum) {
+                    usedNursery = true;
+                    nurseryEnd = addDays(seedEnd, plant.nurseryDuration);
+                }
+                // If no nursery free, skip nursery — use longer grow duration
+            }
+
+            // Phase 3: Growing in GH
+            const growDuration = usedNursery ? (plant.growWithNursery || plant.growNoNursery) : plant.growNoNursery;
+            const growStart = new Date(Math.max(nurseryEnd.getTime(), cycleStart.getTime()));
+            const growEnd = addDays(growStart, growDuration);
+
+            // Phase 4: Harvesting in GH
+            const harvestEnd = addDays(growEnd, plant.harvestDuration);
+
+            // Record bed seeding
+            if (bedNum && s.bedCount > 0) {
+                const bedKey = 'bed-' + bedNum;
+                timelines[bedKey].push({ start: actualSeedStart, end: seedEnd, plantId: plant.id, phase: 'seeding' });
+                schedule.push({ resType: 'bed', resNum: bedNum, plantId: plant.id, phase: 'seeding', start: actualSeedStart, end: seedEnd, usedNursery });
+            }
+
+            // Record nursery
+            if (nurseryNum) {
+                const nurseryKey = 'nursery-' + nurseryNum;
+                timelines[nurseryKey].push({ start: seedEnd, end: nurseryEnd, plantId: plant.id, phase: 'nursery' });
+                schedule.push({ resType: 'nursery', resNum: nurseryNum, plantId: plant.id, phase: 'nursery', start: seedEnd, end: nurseryEnd, usedNursery: true });
+            }
+
+            // Record growing
+            timelines[ghKey].push({ start: growStart, end: growEnd, plantId: plant.id, phase: 'growing', usedNursery });
+            schedule.push({ resType: 'gh', resNum: ghNum, plantId: plant.id, phase: 'growing', start: growStart, end: growEnd, usedNursery });
+
+            // Record harvesting
+            timelines[ghKey].push({ start: growEnd, end: harvestEnd, plantId: plant.id, phase: 'harvesting', usedNursery });
+            schedule.push({ resType: 'gh', resNum: ghNum, plantId: plant.id, phase: 'harvesting', start: growEnd, end: harvestEnd, usedNursery });
+
+            cycleStart = harvestEnd; // Next cycle starts when harvest ends
+        }
+    }
+
+    // Convert dates to strings for storage
+    const stored = schedule.map(s => ({ ...s, start: dateStr(s.start), end: dateStr(s.end) }));
+    save(KEYS.generated, stored);
+    statusDiv.innerHTML = `<span style="color:#2e7d32;font-weight:600">Plan generated: ${stored.length} scheduled phases across ${HORIZON} days.</span>`;
+}
+
+function clearGeneratedPlan() {
+    if (!confirm('Clear the generated plan?')) return;
+    localStorage.removeItem(KEYS.generated);
+    document.getElementById('generateStatus').innerHTML = '<span style="color:#999">Plan cleared.</span>';
+}
+
+// ── Production Overview with Date Navigation ──
+let prodViewDate = new Date();
+prodViewDate.setHours(0,0,0,0);
+
+function prodNavDay(delta) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const maxDate = addDays(today, 180);
+    const newDate = addDays(prodViewDate, delta);
+    if (newDate > maxDate || newDate < addDays(today, -30)) return; // limit range
+    prodViewDate = newDate;
+    renderProduction();
+}
+function prodNavToday() {
+    prodViewDate = new Date(); prodViewDate.setHours(0,0,0,0);
+    renderProduction();
+}
+
+function renderProduction() {
+    const initEntries = getPlanEntries();
+    const generated = load(KEYS.generated) || [];
+    const plants = getPlants();
+    const s = getSettings();
+    const viewDate = prodViewDate;
+    const statsDiv = document.getElementById('productionStats');
+    const cyclesDiv = document.getElementById('productionCycles');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const isToday = dateStr(viewDate) === dateStr(today);
+
+    // Show current date
+    document.getElementById('prodDateLabel').textContent = viewDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + (isToday ? ' (Today)' : '');
+
+    // Combine init entries as schedule items + generated items
+    // Init entries: expand them into schedule-like objects
+    const allSchedule = [];
+
+    // From init entries, build their full phase timeline
+    initEntries.forEach(e => {
         const plant = plants.find(p => p.id === e.plantId);
+        if (!plant) return;
+        const start = new Date(e.startDate); start.setHours(0,0,0,0);
+        let dur = 0;
+        if (e.phase === 'seeding') dur = plant.seedDuration;
+        else if (e.phase === 'nursery') dur = plant.nurseryDuration;
+        else if (e.phase === 'growing') dur = plant.growWithNursery || plant.growNoNursery;
+        else if (e.phase === 'harvesting') dur = plant.harvestDuration;
+        const end = addDays(start, dur);
+        allSchedule.push({ resType: e.resType, resNum: e.resNum, plantId: e.plantId, phase: e.phase, start: dateStr(start), end: dateStr(end), source: 'init' });
+
+        // Chain subsequent phases for GH init entries
+        if (e.resType === 'gh') {
+            const ghPhases = ['growing', 'harvesting'];
+            let idx = ghPhases.indexOf(e.phase);
+            let nextStart = end;
+            while (++idx < ghPhases.length) {
+                let pDur = ghPhases[idx] === 'harvesting' ? plant.harvestDuration : 0;
+                const pEnd = addDays(nextStart, pDur);
+                allSchedule.push({ resType: 'gh', resNum: e.resNum, plantId: e.plantId, phase: ghPhases[idx], start: dateStr(nextStart), end: dateStr(pEnd), source: 'init' });
+                nextStart = pEnd;
+            }
+        }
+    });
+
+    // Add generated schedule (avoid duplicates with init by checking source)
+    generated.forEach(g => {
+        allSchedule.push({ ...g, source: 'generated' });
+    });
+
+    // Find all active cycles on viewDate
+    const viewStr = dateStr(viewDate);
+    const activeCycles = allSchedule.filter(item => item.start <= viewStr && item.end > viewStr).map(item => {
+        const plant = plants.find(p => p.id === item.plantId);
         if (!plant) return null;
-        const start = new Date(e.startDate);
-        const daysElapsed = Math.max(0, Math.floor((now - start) / 86400000));
-
-        let phaseDuration = 0;
-        if (e.phase === 'seeding') phaseDuration = plant.seedDuration;
-        else if (e.phase === 'nursery') phaseDuration = plant.nurseryDuration;
-        else if (e.phase === 'growing') phaseDuration = plant.growWithNursery || plant.growNoNursery;
-        else if (e.phase === 'harvesting') phaseDuration = plant.harvestDuration;
-
+        const start = new Date(item.start);
+        const end = new Date(item.end);
+        const daysElapsed = Math.max(0, daysBetween(start, viewDate));
+        const phaseDuration = daysBetween(start, end);
         const progress = phaseDuration > 0 ? Math.min(100, Math.round((daysElapsed / phaseDuration) * 100)) : 0;
         const daysRemaining = Math.max(0, phaseDuration - daysElapsed);
-        const resLabel = (e.resType === 'gh' ? 'GH' : e.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + e.resNum;
+        const resLabel = (item.resType === 'gh' ? 'GH' : item.resType === 'nursery' ? 'Nursery' : 'Bed') + ' #' + item.resNum;
 
-        // Calculate harvest production if harvesting
         let todayKg = 0, soFarKg = 0;
-        if (e.phase === 'harvesting' && daysElapsed > 0) {
-            // Weight on day N = initWeight * (1 + rate/100)^N per plant
-            // Today's production = weight_today - weight_yesterday per plant * capacity
+        if (item.phase === 'harvesting' && daysElapsed > 0) {
             const weightToday = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed);
             const weightYesterday = plant.initWeight * Math.pow(1 + plant.growthRate / 100, daysElapsed - 1);
             todayKg = (weightToday - weightYesterday) * s.ghCapacity * (1 - plant.damageRate / 100);
-
-            // Total production so far = sum of daily gains = (weight_today - initWeight) * capacity
             soFarKg = (weightToday - plant.initWeight) * s.ghCapacity * (1 - plant.damageRate / 100);
         }
 
-        return { ...e, plant, daysElapsed, phaseDuration, progress, daysRemaining, resLabel, todayKg, soFarKg };
+        return { ...item, plant, daysElapsed, phaseDuration, progress, daysRemaining, resLabel, todayKg, soFarKg };
     }).filter(Boolean);
 
-    // Stats
+    // De-duplicate: prefer init source, unique by resType+resNum+phase
+    const seen = new Set();
+    const cycles = [];
+    activeCycles.sort((a, b) => (a.source === 'init' ? 0 : 1) - (b.source === 'init' ? 0 : 1));
+    activeCycles.forEach(c => {
+        const key = c.resType + '-' + c.resNum + '-' + c.phase + '-' + c.start;
+        if (!seen.has(key)) { seen.add(key); cycles.push(c); }
+    });
+
+    if (!cycles.length) {
+        statsDiv.innerHTML = '';
+        cyclesDiv.innerHTML = '<div class="card"><p class="empty-msg">No active cycles on this date. Initialize plans or generate a cycle plan.</p></div>';
+        return;
+    }
+
     const harvesting = cycles.filter(c => c.phase === 'harvesting');
     const growing = cycles.filter(c => c.phase === 'growing');
     const seeding = cycles.filter(c => c.phase === 'seeding');
@@ -829,8 +1116,8 @@ function renderProduction() {
         <div class="stat-card"><div class="num">${harvesting.length}</div><div class="lbl">Harvesting</div></div>
         <div class="stat-card"><div class="num">${growing.length}</div><div class="lbl">Growing</div></div>
         <div class="stat-card"><div class="num">${seeding.length + nurseryC.length}</div><div class="lbl">Seeding / Nursery</div></div>
-        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalToday.toFixed(1)}</div><div class="lbl">kg Today</div></div>
-        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalSoFar.toFixed(1)}</div><div class="lbl">kg Total So Far</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalToday.toFixed(1)}</div><div class="lbl">kg This Day</div></div>
+        <div class="stat-card" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)"><div class="num" style="color:#2e7d32">${totalSoFar.toFixed(1)}</div><div class="lbl">kg Phase Total</div></div>
     `;
 
     // ── Production Summary by Plant ──
@@ -848,7 +1135,7 @@ function renderProduction() {
             <h3>Production Summary by Plant</h3>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>Plant</th><th>Greenhouses</th><th>Today (kg)</th><th>Total So Far (kg)</th></tr></thead>
+                    <thead><tr><th>Plant</th><th>Greenhouses</th><th>Day's Production (kg)</th><th>Phase Total (kg)</th></tr></thead>
                     <tbody>${Object.entries(byPlant).map(([name, d]) => `<tr>
                         <td><strong>${esc(name)}</strong></td>
                         <td>${d.ghs.join(', ')}</td>
@@ -867,7 +1154,7 @@ function renderProduction() {
             <h3>Harvesting Detail by Greenhouse</h3>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>Greenhouse</th><th>Plant</th><th>Day</th><th>Today (kg)</th><th>So Far (kg)</th></tr></thead>
+                    <thead><tr><th>Greenhouse</th><th>Plant</th><th>Day</th><th>Day's Prod (kg)</th><th>Phase Total (kg)</th></tr></thead>
                     <tbody>${harvesting.map(c => `<tr>
                         <td><strong>${c.resLabel}</strong></td>
                         <td>${esc(c.plant.name)}</td>
@@ -883,8 +1170,10 @@ function renderProduction() {
     // ── All Cycle Cards ──
     const cycleCardsHtml = cycles.map(c => {
         const colors = { seeding: '#ff9800', nursery: '#9c27b0', growing: '#2196f3', harvesting: '#4caf50' };
+        const srcBadge = c.source === 'generated' ? ' <span style="font-size:10px;background:#e3f2fd;color:#1565c0;padding:2px 6px;border-radius:4px;">generated</span>' : '';
+        const nurseryBadge = c.usedNursery === false && c.phase === 'growing' ? ' <span style="font-size:10px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:4px;">no nursery</span>' : '';
         return `<div class="cycle-card ${c.phase}">
-            <div class="label ${c.phase}">${c.phase}</div>
+            <div class="label ${c.phase}">${c.phase}${srcBadge}${nurseryBadge}</div>
             <div class="info">${c.resLabel} &mdash; ${esc(c.plant.name)}</div>
             <div class="detail">Day ${c.daysElapsed} of ${c.phaseDuration} &bull; ${c.daysRemaining} days remaining &bull; ${c.progress}% complete</div>
             <div class="progress-bar"><div class="fill" style="width:${c.progress}%;background:${colors[c.phase]}"></div></div>
