@@ -510,8 +510,24 @@
     </div>
 </div>
 
-<script>
-// ── Data Layer (localStorage) ──
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+// ── Firebase Init ──
+const firebaseConfig = {
+    apiKey: "AIzaSyCbSIWZIW-kDj3CgUTHfW_Ksn6L1Uq1HO0",
+    authDomain: "raseel-planner.firebaseapp.com",
+    projectId: "raseel-planner",
+    storageBucket: "raseel-planner.firebasestorage.app",
+    messagingSenderId: "1027046612153",
+    appId: "1:1027046612153:web:6b2434a9eab1ef99118f68"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+// ── Data Layer (Firestore + in-memory cache) ──
+const _cache = {};
 const KEYS = {
     auth: 'raseel_auth',
     settings: 'raseel_settings',
@@ -522,9 +538,31 @@ const KEYS = {
 };
 const ACCESS_CODE = '1234';
 
-function load(key) { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } }
-function save(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+function load(key) {
+    // Auth stays local-only (per device)
+    if (key === KEYS.auth) { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } }
+    return _cache[key] !== undefined ? _cache[key] : null;
+}
+function save(key, data) {
+    // Auth stays local-only
+    if (key === KEYS.auth) { localStorage.setItem(key, JSON.stringify(data)); return; }
+    _cache[key] = data;
+    // Fire-and-forget write to Firestore
+    setDoc(doc(db, 'appData', key), { data: JSON.parse(JSON.stringify(data)) }).catch(err => console.error('Firestore save error:', err));
+}
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// ── Load all data from Firestore on startup ──
+async function loadFromFirestore() {
+    const allKeys = [...Object.values(KEYS), 'raseel_skipNursery'];
+    const promises = allKeys.filter(k => k !== KEYS.auth).map(async key => {
+        try {
+            const snap = await getDoc(doc(db, 'appData', key));
+            if (snap.exists()) _cache[key] = snap.data().data;
+        } catch (err) { console.error('Firestore load error:', key, err); }
+    });
+    await Promise.all(promises);
+}
 
 // ── Login ──
 function attemptLogin() {
@@ -543,9 +581,10 @@ function logout() {
     location.reload();
 }
 
-function showApp() {
+async function showApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').classList.add('active');
+    await loadFromFirestore();
     loadAllData();
 }
 
@@ -1298,6 +1337,14 @@ function loadAllData() {
     renderAssignments();
     renderProduction();
 }
+
+// ── Expose to global scope for onclick handlers ──
+Object.assign(window, {
+    attemptLogin, logout, saveSettings, savePlant, clearPlantForm, editPlant, deletePlant,
+    saveAssignment, clearAssignmentForm, editAssignment, deleteAssignment,
+    savePlanSection, deletePlanEntry, generateCyclePlan, clearGeneratedPlan,
+    prodNavDay, prodNavToday, prodNavJump, toggleSkipNursery
+});
 
 // ── Init ──
 checkAuth();
