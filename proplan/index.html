@@ -139,7 +139,7 @@
         }
         .date-nav .nav-btns .btn { min-width: 80px; }
         .date-nav input[type="date"] {
-            position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+            position: absolute; left: -9999px; opacity: 0; width: 1px; height: 1px;
         }
 
         /* ── Actions Summary ── */
@@ -521,7 +521,7 @@
             <h1>نظرة عامة على الإنتاج Production Overview</h1>
 
             <div class="date-nav">
-                <div class="date-display" id="prodDateLabel" onclick="document.getElementById('prodDatePicker').showPicker()"></div>
+                <div class="date-display" id="prodDateLabel" onclick="openDatePicker()"></div>
                 <input type="date" id="prodDatePicker" onchange="prodNavJump(this.value)">
                 <div class="nav-btns">
                     <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">التالي &larr;</button>
@@ -1125,6 +1125,28 @@ function syncDatePicker() {
     const picker = document.getElementById('prodDatePicker');
     if (picker) picker.value = dateStr(prodViewDate);
 }
+function openDatePicker() {
+    const picker = document.getElementById('prodDatePicker');
+    if (!picker) return;
+    picker.style.position = 'static';
+    picker.style.opacity = '1';
+    picker.style.width = 'auto';
+    picker.style.height = 'auto';
+    picker.style.left = 'auto';
+    try { picker.showPicker(); } catch(e) { picker.focus(); picker.click(); }
+    // Re-hide after selection or blur
+    const hide = () => {
+        picker.style.position = 'absolute';
+        picker.style.opacity = '0';
+        picker.style.width = '1px';
+        picker.style.height = '1px';
+        picker.style.left = '-9999px';
+        picker.removeEventListener('change', hide);
+        picker.removeEventListener('blur', hide);
+    };
+    picker.addEventListener('change', hide, { once: true });
+    picker.addEventListener('blur', hide, { once: true });
+}
 
 function renderProduction() {
     const initEntries = getPlanEntries();
@@ -1468,7 +1490,7 @@ Object.assign(window, {
     attemptLogin, logout, saveSettings, savePlant, clearPlantForm, editPlant, deletePlant,
     saveAssignment, clearAssignmentForm, editAssignment, deleteAssignment,
     savePlanSection, deletePlanEntry, generateCyclePlan, clearGeneratedPlan,
-    prodNavDay, prodNavToday, prodNavJump, toggleSkipNursery
+    prodNavDay, prodNavToday, prodNavJump, openDatePicker, toggleSkipNursery
 });
 
 // ── Init ──
