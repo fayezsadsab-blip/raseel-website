@@ -1148,6 +1148,180 @@ function openDatePicker() {
     picker.addEventListener('blur', hide, { once: true });
 }
 
+function buildActions(targetDate, allItems, plants, s) {
+    const targetStr = dateStr(targetDate);
+    const skipNursery = isSkipNursery();
+    const actions = [];
+
+    function findNextPhaseItem(currentItem) {
+        const endStr = dateStr(new Date(currentItem.end));
+        if (currentItem.phase === 'seeding') {
+            return allItems.find(ni => ni.plantId === currentItem.plantId && ni.start === endStr && (ni.phase === 'nursery' || ni.phase === 'growing') && ni !== currentItem);
+        }
+        if (currentItem.phase === 'nursery') {
+            return allItems.find(ni => ni.plantId === currentItem.plantId && ni.start === endStr && ni.phase === 'growing' && ni.resType === 'gh' && ni !== currentItem);
+        }
+        if (currentItem.phase === 'growing') {
+            return allItems.find(ni => ni.resType === currentItem.resType && ni.resNum === currentItem.resNum && ni.start === endStr && ni.phase === 'harvesting' && ni !== currentItem);
+        }
+        if (currentItem.phase === 'harvesting') {
+            return allItems.find(ni => ni.resType === 'gh' && ni.resNum === currentItem.resNum && ni.start === endStr && ni !== currentItem);
+        }
+        return null;
+    }
+
+    function findPrevPhaseItem(currentItem) {
+        const startStr = currentItem.start;
+        if (currentItem.phase === 'growing') {
+            return allItems.find(ni => ni.plantId === currentItem.plantId && dateStr(new Date(ni.end)) === startStr && (ni.phase === 'nursery' || ni.phase === 'seeding') && ni !== currentItem);
+        }
+        if (currentItem.phase === 'nursery') {
+            return allItems.find(ni => ni.plantId === currentItem.plantId && dateStr(new Date(ni.end)) === startStr && ni.phase === 'seeding' && ni !== currentItem);
+        }
+        if (currentItem.phase === 'harvesting') {
+            return allItems.find(ni => ni.resType === currentItem.resType && ni.resNum === currentItem.resNum && dateStr(new Date(ni.end)) === startStr && ni.phase === 'growing' && ni !== currentItem);
+        }
+        return null;
+    }
+
+    allItems.forEach(item => {
+        const plant = plants.find(p => p.id === item.plantId);
+        if (!plant) return;
+        const itemStart = new Date(item.start); itemStart.setHours(0,0,0,0);
+        const itemEnd = new Date(item.end); itemEnd.setHours(0,0,0,0);
+        const startStr = dateStr(itemStart);
+        const label = resName(item.resType, item.resNum);
+        const pName = plant.name;
+        const cap = s.ghCapacity;
+        const dur = daysBetween(itemStart, itemEnd);
+
+        // ── Last day of phase ──
+        const lastDayStr = dateStr(addDays(itemEnd, -1));
+        if (lastDayStr === targetStr) {
+            const next = findNextPhaseItem(item);
+
+            if (item.phase === 'seeding') {
+                if (next && next.phase === 'nursery') {
+                    const destLabel = resName(next.resType, next.resNum);
+                    actions.push({ type: 'move', icon: '📦',
+                        text: `آخر يوم بذر ${label} — ${pName} (${s.bedCapacity} نبتة). تجهيز النقل إلى ${destLabel} لبدء الحضن غداً — مدة الحضن ${plant.nurseryDuration} أيام` });
+                } else if (next && next.phase === 'growing') {
+                    const destLabel = resName(next.resType, next.resNum);
+                    actions.push({ type: 'move', icon: '📦',
+                        text: `آخر يوم بذر ${label} — ${pName} (${s.bedCapacity} نبتة). نقل مباشر إلى ${destLabel} لبدء النمو غداً (بدون حاضنة) — مدة النمو ${plant.growNoNursery} أيام` });
+                } else {
+                    actions.push({ type: 'end', icon: '🏁',
+                        text: `آخر يوم بذر ${label} — ${pName}. انتهاء البذر — ${s.bedCapacity} نبتة جاهزة` });
+                }
+            }
+
+            else if (item.phase === 'nursery') {
+                if (next) {
+                    const destLabel = resName(next.resType, next.resNum);
+                    const growDur = plant.growWithNursery || plant.growNoNursery;
+                    actions.push({ type: 'move', icon: '📦',
+                        text: `آخر يوم حضن ${label} — ${pName} (${s.nurseryCapacity} نبتة). تجهيز النقل إلى ${destLabel} لبدء النمو غداً — مدة النمو ${growDur} أيام` });
+                } else {
+                    actions.push({ type: 'end', icon: '🏁',
+                        text: `آخر يوم حضن ${label} — ${pName}. ${s.nurseryCapacity} نبتة جاهزة للنقل` });
+                }
+            }
+
+            else if (item.phase === 'growing') {
+                const plantsPerDay = cap / plant.harvestDuration;
+                const dmg = 1 - plant.damageRate / 100;
+                const rate = 1 + plant.growthRate / 100;
+                let totalEstKg = 0;
+                for (let d = 0; d < plant.harvestDuration; d++) {
+                    totalEstKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
+                }
+                actions.push({ type: 'harvest', icon: '🌾',
+                    text: `آخر يوم نمو ${label} — ${pName} (${cap} نبتة). بدء الحصاد غداً — الإنتاج المتوقع ~${totalEstKg.toFixed(0)} كجم خلال ${plant.harvestDuration} أيام` });
+            }
+
+            else if (item.phase === 'harvesting') {
+                const plantsPerDay = cap / plant.harvestDuration;
+                const dmg = 1 - plant.damageRate / 100;
+                const rate = 1 + plant.growthRate / 100;
+                let totalKg = 0;
+                for (let d = 0; d < plant.harvestDuration; d++) {
+                    totalKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
+                }
+                if (next) {
+                    const nextPlant = plants.find(p => p.id === next.plantId);
+                    const nextPName = nextPlant ? nextPlant.name : pName;
+                    actions.push({ type: 'end', icon: '✅',
+                        text: `آخر يوم حصاد ${label} — ${pName}. إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. تجهيز ${label} لدورة جديدة — ${nextPName} غداً` });
+                } else {
+                    actions.push({ type: 'end', icon: '✅',
+                        text: `آخر يوم حصاد ${label} — ${pName}. إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. انتهاء الدورة — ${label} متاح` });
+                }
+            }
+        }
+
+        // ── First day of phase ──
+        if (startStr === targetStr) {
+            const prev = findPrevPhaseItem(item);
+            const fromLabel = prev ? resName(prev.resType, prev.resNum) : '';
+
+            if (item.phase === 'seeding') {
+                actions.push({ type: 'start', icon: '🌱',
+                    text: `بدء بذر ${label} — ${pName} — سعة ${s.bedCapacity} نبتة — مدة البذر ${dur} أيام` + (skipNursery ? ' (بدون حاضنة — نقل مباشر للنمو)' : '') });
+            }
+            else if (item.phase === 'nursery') {
+                actions.push({ type: 'start', icon: '🏠',
+                    text: `بدء حضن ${label} — ${pName}` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — سعة ${s.nurseryCapacity} نبتة — مدة الحضن ${dur} أيام` });
+            }
+            else if (item.phase === 'growing') {
+                const growType = (prev && prev.phase === 'nursery') ? 'بعد الحضن' : (skipNursery ? 'بدون حاضنة' : 'مباشر');
+                actions.push({ type: 'start', icon: '🌿',
+                    text: `بدء نمو ${label} — ${pName} (${growType})` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — سعة ${cap} نبتة — مدة النمو ${dur} أيام` });
+            }
+            else if (item.phase === 'harvesting') {
+                const plantsPerDay = cap / plant.harvestDuration;
+                const dmg = 1 - plant.damageRate / 100;
+                const rate = 1 + plant.growthRate / 100;
+                let totalEstKg = 0;
+                for (let d = 0; d < plant.harvestDuration; d++) {
+                    totalEstKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
+                }
+                const dailyKg = plantsPerDay * plant.initWeight * dmg;
+                actions.push({ type: 'harvest', icon: '🌾',
+                    text: `بدء حصاد ${label} — ${pName} — ${cap} نبتة — ~${dailyKg.toFixed(0)} كجم/يوم — الإنتاج المتوقع ~${totalEstKg.toFixed(0)} كجم خلال ${dur} أيام` });
+            }
+        }
+    });
+
+    actions.sort((a, b) => {
+        const order = { end: 0, move: 1, harvest: 2, start: 3 };
+        return (order[a.type] ?? 4) - (order[b.type] ?? 4);
+    });
+    return actions;
+}
+
+function renderActionsSection(viewDate, allSchedule, plants, s) {
+    const actionsDiv = document.getElementById('productionActions');
+    const tomorrow = addDays(viewDate, 1);
+    const todayActions = buildActions(viewDate, allSchedule, plants, s);
+    const tomorrowActions = buildActions(tomorrow, allSchedule, plants, s);
+    let actionsHtml = '';
+    const renderList = (items) => items.length
+        ? '<ul class="action-list">' + items.map(a => {
+            const cls = a.type === 'harvest' ? 'harvest-action' : a.type === 'move' ? 'move-action' : a.type === 'start' ? 'start-action' : 'end-action';
+            return `<li class="${cls}"><span class="action-icon">${a.icon}</span>${esc(a.text)}</li>`;
+        }).join('') + '</ul>'
+        : '<div class="no-actions">لا توجد إجراءات</div>';
+    if (todayActions.length) {
+        actionsHtml += `<div class="actions-summary" style="border-right-color:#2e7d32">
+            <h3>📋 إجراءات اليوم</h3>${renderList(todayActions)}</div>`;
+    }
+    if (tomorrowActions.length) {
+        actionsHtml += `<div class="actions-summary" style="border-right-color:#1565c0">
+            <h3>📋 إجراءات الغد</h3>${renderList(tomorrowActions)}</div>`;
+    }
+    actionsDiv.innerHTML = actionsHtml;
+}
+
 function renderProduction() {
     const initEntries = getPlanEntries();
     const generated = load(KEYS.generated) || [];
@@ -1244,6 +1418,9 @@ function renderProduction() {
         const key = c.resType + '-' + c.resNum + '-' + c.phase + '-' + c.start;
         if (!seen.has(key)) { seen.add(key); cycles.push(c); }
     });
+
+    // Render actions summary (works even with no active cycles)
+    renderActionsSection(viewDate, allSchedule, plants, s);
 
     if (!cycles.length) {
         statsDiv.innerHTML = '';
@@ -1359,206 +1536,6 @@ function renderProduction() {
             </div>
         </div>`;
     }
-
-    // ── Actions Summary (Today & Tomorrow) ──
-    const actionsDiv = document.getElementById('productionActions');
-    const tomorrow = addDays(viewDate, 1);
-    const tomorrowStr = dateStr(tomorrow);
-
-    function buildActions(targetDate, allItems) {
-        const targetStr = dateStr(targetDate);
-        const skipNursery = isSkipNursery();
-        const actions = [];
-        // Build a lookup: for a given phase end date + plantId, find the next phase item
-        // Phase flow: seeding(bed) → nursery(nursery) or growing(gh) → growing(gh) → harvesting(gh) → end
-        // Cross-resource: seeding ends on bed → nursery starts on nursery OR growing starts on gh
-        //                 nursery ends on nursery → growing starts on gh
-        //                 growing ends on gh → harvesting starts on same gh
-        //                 harvesting ends on gh → cycle complete, gh freed for new seeding→... cycle
-
-        function findNextPhaseItem(currentItem) {
-            const endStr = dateStr(new Date(currentItem.end));
-            // For seeding → look for nursery or growing starting on endStr with same plantId
-            if (currentItem.phase === 'seeding') {
-                // Try nursery first, then growing
-                return allItems.find(ni => ni.plantId === currentItem.plantId && ni.start === endStr && (ni.phase === 'nursery' || ni.phase === 'growing') && ni !== currentItem);
-            }
-            if (currentItem.phase === 'nursery') {
-                // Nursery → growing on a GH
-                return allItems.find(ni => ni.plantId === currentItem.plantId && ni.start === endStr && ni.phase === 'growing' && ni.resType === 'gh' && ni !== currentItem);
-            }
-            if (currentItem.phase === 'growing') {
-                // Growing → harvesting on same GH
-                return allItems.find(ni => ni.resType === currentItem.resType && ni.resNum === currentItem.resNum && ni.start === endStr && ni.phase === 'harvesting' && ni !== currentItem);
-            }
-            // Harvesting → look for next seeding cycle using same GH (new cycle)
-            if (currentItem.phase === 'harvesting') {
-                // Check if a new growing/seeding starts on this GH after harvest
-                return allItems.find(ni => ni.resType === 'gh' && ni.resNum === currentItem.resNum && ni.start === endStr && ni !== currentItem);
-            }
-            return null;
-        }
-
-        function findPrevPhaseItem(currentItem) {
-            const startStr = currentItem.start;
-            if (currentItem.phase === 'growing') {
-                // What fed into this growing? nursery or seeding ending on startStr
-                return allItems.find(ni => ni.plantId === currentItem.plantId && dateStr(new Date(ni.end)) === startStr && (ni.phase === 'nursery' || ni.phase === 'seeding') && ni !== currentItem);
-            }
-            if (currentItem.phase === 'nursery') {
-                return allItems.find(ni => ni.plantId === currentItem.plantId && dateStr(new Date(ni.end)) === startStr && ni.phase === 'seeding' && ni !== currentItem);
-            }
-            if (currentItem.phase === 'harvesting') {
-                return allItems.find(ni => ni.resType === currentItem.resType && ni.resNum === currentItem.resNum && dateStr(new Date(ni.end)) === startStr && ni.phase === 'growing' && ni !== currentItem);
-            }
-            return null;
-        }
-
-        allItems.forEach(item => {
-            const plant = plants.find(p => p.id === item.plantId);
-            if (!plant) return;
-            const itemStart = new Date(item.start); itemStart.setHours(0,0,0,0);
-            const itemEnd = new Date(item.end); itemEnd.setHours(0,0,0,0);
-            const startStr = dateStr(itemStart);
-            const label = resName(item.resType, item.resNum);
-            const pName = plant.name;
-            const cap = s.ghCapacity;
-            const dur = daysBetween(itemStart, itemEnd);
-
-            // ── Last day of phase ──
-            const lastDayStr = dateStr(addDays(itemEnd, -1));
-            if (lastDayStr === targetStr) {
-                const next = findNextPhaseItem(item);
-
-                if (item.phase === 'seeding') {
-                    if (next && next.phase === 'nursery') {
-                        const destLabel = resName(next.resType, next.resNum);
-                        actions.push({ type: 'move', icon: '📦',
-                            text: `آخر يوم بذر ${label} — ${pName} (${s.bedCapacity} نبتة). تجهيز النقل إلى ${destLabel} لبدء الحضن غداً — مدة الحضن ${plant.nurseryDuration} أيام` });
-                    } else if (next && next.phase === 'growing') {
-                        const destLabel = resName(next.resType, next.resNum);
-                        actions.push({ type: 'move', icon: '📦',
-                            text: `آخر يوم بذر ${label} — ${pName} (${s.bedCapacity} نبتة). نقل مباشر إلى ${destLabel} لبدء النمو غداً (بدون حاضنة) — مدة النمو ${plant.growNoNursery} أيام` });
-                    } else {
-                        actions.push({ type: 'end', icon: '🏁',
-                            text: `آخر يوم بذر ${label} — ${pName}. انتهاء البذر — ${s.bedCapacity} نبتة جاهزة` });
-                    }
-                }
-
-                else if (item.phase === 'nursery') {
-                    if (next) {
-                        const destLabel = resName(next.resType, next.resNum);
-                        const growDur = plant.growWithNursery || plant.growNoNursery;
-                        actions.push({ type: 'move', icon: '📦',
-                            text: `آخر يوم حضن ${label} — ${pName} (${s.nurseryCapacity} نبتة). تجهيز النقل إلى ${destLabel} لبدء النمو غداً — مدة النمو ${growDur} أيام` });
-                    } else {
-                        actions.push({ type: 'end', icon: '🏁',
-                            text: `آخر يوم حضن ${label} — ${pName}. ${s.nurseryCapacity} نبتة جاهزة للنقل` });
-                    }
-                }
-
-                else if (item.phase === 'growing') {
-                    const estKg = cap * plant.initWeight;
-                    // Calculate total expected harvest over full harvest duration with growth rate
-                    const plantsPerDay = cap / plant.harvestDuration;
-                    const dmg = 1 - plant.damageRate / 100;
-                    const rate = 1 + plant.growthRate / 100;
-                    let totalEstKg = 0;
-                    for (let d = 0; d < plant.harvestDuration; d++) {
-                        totalEstKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
-                    }
-                    actions.push({ type: 'harvest', icon: '🌾',
-                        text: `آخر يوم نمو ${label} — ${pName} (${cap} نبتة). بدء الحصاد غداً — الإنتاج المتوقع ~${totalEstKg.toFixed(0)} كجم خلال ${plant.harvestDuration} أيام` });
-                }
-
-                else if (item.phase === 'harvesting') {
-                    // Calculate actual total harvest
-                    const plantsPerDay = cap / plant.harvestDuration;
-                    const dmg = 1 - plant.damageRate / 100;
-                    const rate = 1 + plant.growthRate / 100;
-                    let totalKg = 0;
-                    for (let d = 0; d < plant.harvestDuration; d++) {
-                        totalKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
-                    }
-                    if (next) {
-                        const nextPlant = plants.find(p => p.id === next.plantId);
-                        const nextPName = nextPlant ? nextPlant.name : pName;
-                        actions.push({ type: 'end', icon: '✅',
-                            text: `آخر يوم حصاد ${label} — ${pName}. إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. تجهيز ${label} لدورة جديدة — ${nextPName} غداً` });
-                    } else {
-                        actions.push({ type: 'end', icon: '✅',
-                            text: `آخر يوم حصاد ${label} — ${pName}. إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. انتهاء الدورة — ${label} متاح` });
-                    }
-                }
-            }
-
-            // ── First day of phase ──
-            if (startStr === targetStr) {
-                const prev = findPrevPhaseItem(item);
-                const fromLabel = prev ? resName(prev.resType, prev.resNum) : '';
-
-                if (item.phase === 'seeding') {
-                    actions.push({ type: 'start', icon: '🌱',
-                        text: `بدء بذر ${label} — ${pName} — سعة ${s.bedCapacity} نبتة — مدة البذر ${dur} أيام` + (skipNursery ? ' (بدون حاضنة — نقل مباشر للنمو)' : '') });
-                }
-                else if (item.phase === 'nursery') {
-                    actions.push({ type: 'start', icon: '🏠',
-                        text: `بدء حضن ${label} — ${pName}` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — سعة ${s.nurseryCapacity} نبتة — مدة الحضن ${dur} أيام` });
-                }
-                else if (item.phase === 'growing') {
-                    const growType = (prev && prev.phase === 'nursery') ? 'بعد الحضن' : (skipNursery ? 'بدون حاضنة' : 'مباشر');
-                    actions.push({ type: 'start', icon: '🌿',
-                        text: `بدء نمو ${label} — ${pName} (${growType})` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — سعة ${cap} نبتة — مدة النمو ${dur} أيام` });
-                }
-                else if (item.phase === 'harvesting') {
-                    const plantsPerDay = cap / plant.harvestDuration;
-                    const dmg = 1 - plant.damageRate / 100;
-                    const rate = 1 + plant.growthRate / 100;
-                    let totalEstKg = 0;
-                    for (let d = 0; d < plant.harvestDuration; d++) {
-                        totalEstKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
-                    }
-                    const dailyKg = plantsPerDay * plant.initWeight * dmg;
-                    actions.push({ type: 'harvest', icon: '🌾',
-                        text: `بدء حصاد ${label} — ${pName} — ${cap} نبتة — ~${dailyKg.toFixed(0)} كجم/يوم — الإنتاج المتوقع ~${totalEstKg.toFixed(0)} كجم خلال ${dur} أيام` });
-                }
-            }
-        });
-
-        // Sort: last-day actions first, then first-day
-        actions.sort((a, b) => {
-            const order = { end: 0, move: 1, harvest: 2, start: 3 };
-            return (order[a.type] ?? 4) - (order[b.type] ?? 4);
-        });
-        return actions;
-    }
-
-    const todayActions = buildActions(viewDate, allSchedule);
-    const tomorrowActions = buildActions(tomorrow, allSchedule);
-
-    let actionsHtml = '';
-    if (todayActions.length || tomorrowActions.length) {
-        const renderList = (items) => items.length
-            ? '<ul class="action-list">' + items.map(a => {
-                const cls = a.type === 'harvest' ? 'harvest-action' : a.type === 'move' ? 'move-action' : a.type === 'start' ? 'start-action' : 'end-action';
-                return `<li class="${cls}"><span class="action-icon">${a.icon}</span>${esc(a.text)}</li>`;
-            }).join('') + '</ul>'
-            : '<div class="no-actions">لا توجد إجراءات</div>';
-
-        if (todayActions.length) {
-            actionsHtml += `<div class="actions-summary" style="border-right-color:#2e7d32">
-                <h3>📋 إجراءات اليوم</h3>
-                ${renderList(todayActions)}
-            </div>`;
-        }
-        if (tomorrowActions.length) {
-            actionsHtml += `<div class="actions-summary" style="border-right-color:#1565c0">
-                <h3>📋 إجراءات الغد</h3>
-                ${renderList(tomorrowActions)}
-            </div>`;
-        }
-    }
-    actionsDiv.innerHTML = actionsHtml;
 
     // ── All Cycle Cards ──
     const cycleCardsHtml = cycles.map(c => {
