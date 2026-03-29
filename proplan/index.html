@@ -1157,35 +1157,73 @@ function buildActions(targetDate, allItems, plants, s) {
     const skipNursery = isSkipNursery();
     const actions = [];
 
-    function findNextPhaseItem(currentItem) {
-        const endStr = dateStr(new Date(currentItem.end));
-        if (currentItem.phase === 'seeding') {
-            return allItems.find(ni => ni.plantId === currentItem.plantId && ni.start === endStr && (ni.phase === 'nursery' || ni.phase === 'growing') && ni !== currentItem);
+    function calcTotalHarvestKg(plant) {
+        if (!plant.harvestDuration) return 0;
+        const ppd = s.ghCapacity / plant.harvestDuration;
+        const dmg = 1 - plant.damageRate / 100;
+        const rate = 1 + plant.growthRate / 100;
+        let total = 0;
+        for (let d = 0; d < plant.harvestDuration; d++) total += ppd * plant.initWeight * Math.pow(rate, d) * dmg;
+        return total;
+    }
+    function calcDayKg(plant, dayIdx) {
+        if (!plant.harvestDuration) return 0;
+        const ppd = s.ghCapacity / plant.harvestDuration;
+        const dmg = 1 - plant.damageRate / 100;
+        const rate = 1 + plant.growthRate / 100;
+        return ppd * plant.initWeight * Math.pow(rate, dayIdx) * dmg;
+    }
+
+    // Find what follows an item (same plant or same GH depending on phase)
+    function findNext(item) {
+        const endStr = dateStr(new Date(item.end));
+        if (item.phase === 'seeding') {
+            // bed ends → nursery or growing (GH) starts for same plant
+            return allItems.find(ni => ni.plantId === item.plantId && ni.start === endStr && (ni.phase === 'nursery' || ni.phase === 'growing') && ni !== item);
         }
-        if (currentItem.phase === 'nursery') {
-            return allItems.find(ni => ni.plantId === currentItem.plantId && ni.start === endStr && ni.phase === 'growing' && ni.resType === 'gh' && ni !== currentItem);
+        if (item.phase === 'nursery') {
+            // nursery ends → growing on a GH starts for same plant
+            return allItems.find(ni => ni.plantId === item.plantId && ni.start === endStr && ni.phase === 'growing' && ni.resType === 'gh' && ni !== item);
         }
-        if (currentItem.phase === 'growing') {
-            return allItems.find(ni => ni.resType === currentItem.resType && ni.resNum === currentItem.resNum && ni.start === endStr && ni.phase === 'harvesting' && ni !== currentItem);
+        if (item.phase === 'growing') {
+            // growing ends → harvesting on same GH
+            return allItems.find(ni => ni.resType === 'gh' && ni.resNum === item.resNum && ni.start === endStr && ni.phase === 'harvesting' && ni !== item);
         }
-        if (currentItem.phase === 'harvesting') {
-            return allItems.find(ni => ni.resType === 'gh' && ni.resNum === currentItem.resNum && ni.start === endStr && ni !== currentItem);
+        if (item.phase === 'harvesting') {
+            // harvest ends → next growing on same GH (new cycle)
+            return allItems.find(ni => ni.resType === 'gh' && ni.resNum === item.resNum && ni.start === endStr && ni.phase === 'growing' && ni !== item);
         }
         return null;
     }
 
-    function findPrevPhaseItem(currentItem) {
-        const startStr = currentItem.start;
-        if (currentItem.phase === 'growing') {
-            return allItems.find(ni => ni.plantId === currentItem.plantId && dateStr(new Date(ni.end)) === startStr && (ni.phase === 'nursery' || ni.phase === 'seeding') && ni !== currentItem);
+    // Find what fed into an item
+    function findPrev(item) {
+        const startStr = item.start;
+        if (item.phase === 'growing') {
+            // what fed this growing? nursery or seeding ending on startStr, same plant
+            return allItems.find(ni => ni.plantId === item.plantId && dateStr(new Date(ni.end)) === startStr && (ni.phase === 'nursery' || ni.phase === 'seeding') && ni !== item);
         }
-        if (currentItem.phase === 'nursery') {
-            return allItems.find(ni => ni.plantId === currentItem.plantId && dateStr(new Date(ni.end)) === startStr && ni.phase === 'seeding' && ni !== currentItem);
+        if (item.phase === 'nursery') {
+            return allItems.find(ni => ni.plantId === item.plantId && dateStr(new Date(ni.end)) === startStr && ni.phase === 'seeding' && ni !== item);
         }
-        if (currentItem.phase === 'harvesting') {
-            return allItems.find(ni => ni.resType === currentItem.resType && ni.resNum === currentItem.resNum && dateStr(new Date(ni.end)) === startStr && ni.phase === 'growing' && ni !== currentItem);
+        if (item.phase === 'harvesting') {
+            return allItems.find(ni => ni.resType === 'gh' && ni.resNum === item.resNum && dateStr(new Date(ni.end)) === startStr && ni.phase === 'growing' && ni !== item);
         }
         return null;
+    }
+
+    // For a growing item, trace back through nursery/seeding to find the origin bed
+    function traceOrigin(growItem) {
+        const prev = findPrev(growItem);
+        if (!prev) return null;
+        if (prev.phase === 'nursery') {
+            const bed = findPrev(prev);
+            return { nursery: prev, bed: bed };
+        }
+        if (prev.phase === 'seeding') {
+            return { nursery: null, bed: prev };
+        }
+        return { nursery: null, bed: null };
     }
 
     allItems.forEach(item => {
@@ -1199,99 +1237,116 @@ function buildActions(targetDate, allItems, plants, s) {
         const cap = s.ghCapacity;
         const dur = daysBetween(itemStart, itemEnd);
 
-        // ── Last day of phase ──
+        // ═══ LAST DAY OF PHASE ═══
         const lastDayStr = dateStr(addDays(itemEnd, -1));
-        if (lastDayStr === targetStr) {
-            const next = findNextPhaseItem(item);
+        if (lastDayStr === targetStr && dur > 0) {
+            const next = findNext(item);
 
             if (item.phase === 'seeding') {
+                // Last day seeding → where do these seedlings go?
                 if (next && next.phase === 'nursery') {
-                    const destLabel = resName(next.resType, next.resNum);
+                    const nurseryLabel = resName(next.resType, next.resNum);
+                    // Also find where nursery will eventually send them
+                    const afterNursery = findNext(next);
+                    const ghInfo = afterNursery ? ` ثم إلى ${resName(afterNursery.resType, afterNursery.resNum)} للنمو` : '';
                     actions.push({ type: 'move', icon: '📦',
-                        text: `آخر يوم بذر ${label} — ${pName} (${s.bedCapacity} نبتة). تجهيز النقل إلى ${destLabel} لبدء الحضن غداً — مدة الحضن ${plant.nurseryDuration} أيام` });
+                        text: `آخر يوم بذر ${label} — ${pName}. نقل ${s.bedCapacity} نبتة إلى ${nurseryLabel} لبدء الحضن غداً (${plant.nurseryDuration} يوم)${ghInfo}` });
                 } else if (next && next.phase === 'growing') {
-                    const destLabel = resName(next.resType, next.resNum);
+                    const ghLabel = resName(next.resType, next.resNum);
                     actions.push({ type: 'move', icon: '📦',
-                        text: `آخر يوم بذر ${label} — ${pName} (${s.bedCapacity} نبتة). نقل مباشر إلى ${destLabel} لبدء النمو غداً (بدون حاضنة) — مدة النمو ${plant.growNoNursery} أيام` });
+                        text: `آخر يوم بذر ${label} — ${pName}. نقل مباشر ${s.bedCapacity} نبتة إلى ${ghLabel} لبدء النمو غداً بدون حاضنة (${plant.growNoNursery} يوم)` });
                 } else {
                     actions.push({ type: 'end', icon: '🏁',
-                        text: `آخر يوم بذر ${label} — ${pName}. انتهاء البذر — ${s.bedCapacity} نبتة جاهزة` });
+                        text: `آخر يوم بذر ${label} — ${pName}. ${s.bedCapacity} نبتة جاهزة — لا يوجد وجهة محددة` });
                 }
             }
 
             else if (item.phase === 'nursery') {
+                // Last day nursery → which GH?
                 if (next) {
-                    const destLabel = resName(next.resType, next.resNum);
+                    const ghLabel = resName(next.resType, next.resNum);
                     const growDur = plant.growWithNursery || plant.growNoNursery;
                     actions.push({ type: 'move', icon: '📦',
-                        text: `آخر يوم حضن ${label} — ${pName} (${s.nurseryCapacity} نبتة). تجهيز النقل إلى ${destLabel} لبدء النمو غداً — مدة النمو ${growDur} أيام` });
+                        text: `آخر يوم حضن ${label} — ${pName}. نقل ${s.nurseryCapacity} نبتة إلى ${ghLabel} لبدء النمو غداً (${growDur} يوم)` });
                 } else {
                     actions.push({ type: 'end', icon: '🏁',
-                        text: `آخر يوم حضن ${label} — ${pName}. ${s.nurseryCapacity} نبتة جاهزة للنقل` });
+                        text: `آخر يوم حضن ${label} — ${pName}. ${s.nurseryCapacity} نبتة جاهزة للنقل — لا يوجد بيت محمي محدد` });
                 }
             }
 
             else if (item.phase === 'growing') {
-                const plantsPerDay = cap / plant.harvestDuration;
-                const dmg = 1 - plant.damageRate / 100;
-                const rate = 1 + plant.growthRate / 100;
-                let totalEstKg = 0;
-                for (let d = 0; d < plant.harvestDuration; d++) {
-                    totalEstKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
-                }
+                // Last day growing → harvest starts tomorrow
+                const totalKg = calcTotalHarvestKg(plant);
+                const firstDayKg = calcDayKg(plant, 0);
                 actions.push({ type: 'harvest', icon: '🌾',
-                    text: `آخر يوم نمو ${label} — ${pName} (${cap} نبتة). بدء الحصاد غداً — الإنتاج المتوقع ~${totalEstKg.toFixed(0)} كجم خلال ${plant.harvestDuration} أيام` });
+                    text: `آخر يوم نمو ${label} — ${pName} (${cap} نبتة). بدء الحصاد غداً — أول يوم ~${firstDayKg.toFixed(0)} كجم — إجمالي متوقع ~${totalKg.toFixed(0)} كجم خلال ${plant.harvestDuration} يوم` });
             }
 
             else if (item.phase === 'harvesting') {
-                const plantsPerDay = cap / plant.harvestDuration;
-                const dmg = 1 - plant.damageRate / 100;
-                const rate = 1 + plant.growthRate / 100;
-                let totalKg = 0;
-                for (let d = 0; d < plant.harvestDuration; d++) {
-                    totalKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
-                }
-                if (next) {
+                // Last day harvesting → what's next for this GH?
+                const totalKg = calcTotalHarvestKg(plant);
+                if (next && next.phase === 'growing') {
                     const nextPlant = plants.find(p => p.id === next.plantId);
-                    const nextPName = nextPlant ? nextPlant.name : pName;
+                    const nextPName = nextPlant ? nextPlant.name : '—';
+                    const nextGrowDur = nextPlant ? (nextPlant.growWithNursery || nextPlant.growNoNursery) : 0;
+                    // Trace where the next growing cycle comes from
+                    const origin = traceOrigin(next);
+                    let fromInfo = '';
+                    if (origin && origin.nursery) {
+                        fromInfo = ` — واردة من ${resName(origin.nursery.resType, origin.nursery.resNum)}`;
+                    } else if (origin && origin.bed) {
+                        fromInfo = ` — واردة من ${resName(origin.bed.resType, origin.bed.resNum)}` + (skipNursery ? ' (بدون حاضنة)' : '');
+                    }
                     actions.push({ type: 'end', icon: '✅',
-                        text: `آخر يوم حصاد ${label} — ${pName}. إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. تجهيز ${label} لدورة جديدة — ${nextPName} غداً` });
+                        text: `آخر يوم حصاد ${label} — ${pName} — إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. تجهيز للنمو غداً — ${nextPName} (${nextGrowDur} يوم)${fromInfo}` });
                 } else {
                     actions.push({ type: 'end', icon: '✅',
-                        text: `آخر يوم حصاد ${label} — ${pName}. إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. انتهاء الدورة — ${label} متاح` });
+                        text: `آخر يوم حصاد ${label} — ${pName} — إجمالي الإنتاج ~${totalKg.toFixed(0)} كجم. انتهاء الدورة — ${label} متاح لدورة جديدة` });
                 }
             }
         }
 
-        // ── First day of phase ──
-        if (startStr === targetStr) {
-            const prev = findPrevPhaseItem(item);
-            const fromLabel = prev ? resName(prev.resType, prev.resNum) : '';
+        // ═══ FIRST DAY OF PHASE ═══
+        if (startStr === targetStr && dur > 0) {
+            const prev = findPrev(item);
 
             if (item.phase === 'seeding') {
+                // Where will these seedlings go after seeding?
+                const next = findNext(item);
+                let destInfo = '';
+                if (next && next.phase === 'nursery') {
+                    destInfo = ` — ثم إلى ${resName(next.resType, next.resNum)} للحضن`;
+                } else if (next && next.phase === 'growing') {
+                    destInfo = ` — ثم مباشرة إلى ${resName(next.resType, next.resNum)} للنمو (بدون حاضنة)`;
+                }
                 actions.push({ type: 'start', icon: '🌱',
-                    text: `بدء بذر ${label} — ${pName} — سعة ${s.bedCapacity} نبتة — مدة البذر ${dur} أيام` + (skipNursery ? ' (بدون حاضنة — نقل مباشر للنمو)' : '') });
+                    text: `بدء بذر ${label} — ${pName} — ${s.bedCapacity} نبتة — ${dur} يوم${destInfo}` });
             }
             else if (item.phase === 'nursery') {
+                const fromLabel = prev ? resName(prev.resType, prev.resNum) : '';
+                const next = findNext(item);
+                let destInfo = next ? ` — ثم إلى ${resName(next.resType, next.resNum)} للنمو` : '';
                 actions.push({ type: 'start', icon: '🏠',
-                    text: `بدء حضن ${label} — ${pName}` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — سعة ${s.nurseryCapacity} نبتة — مدة الحضن ${dur} أيام` });
+                    text: `بدء حضن ${label} — ${pName}` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — ${s.nurseryCapacity} نبتة — ${dur} يوم${destInfo}` });
             }
             else if (item.phase === 'growing') {
-                const growType = (prev && prev.phase === 'nursery') ? 'بعد الحضن' : (skipNursery ? 'بدون حاضنة' : 'مباشر');
+                // Where did these plants come from?
+                let fromInfo = '';
+                if (prev && prev.phase === 'nursery') {
+                    const bed = findPrev(prev);
+                    fromInfo = ` — واردة من ${resName(prev.resType, prev.resNum)}`;
+                    if (bed) fromInfo += ` (بذر ${resName(bed.resType, bed.resNum)})`;
+                } else if (prev && prev.phase === 'seeding') {
+                    fromInfo = ` — واردة من ${resName(prev.resType, prev.resNum)} (بدون حاضنة)`;
+                }
                 actions.push({ type: 'start', icon: '🌿',
-                    text: `بدء نمو ${label} — ${pName} (${growType})` + (fromLabel ? ` — واردة من ${fromLabel}` : '') + ` — سعة ${cap} نبتة — مدة النمو ${dur} أيام` });
+                    text: `بدء نمو ${label} — ${pName} — ${cap} نبتة — ${dur} يوم${fromInfo}` });
             }
             else if (item.phase === 'harvesting') {
-                const plantsPerDay = cap / plant.harvestDuration;
-                const dmg = 1 - plant.damageRate / 100;
-                const rate = 1 + plant.growthRate / 100;
-                let totalEstKg = 0;
-                for (let d = 0; d < plant.harvestDuration; d++) {
-                    totalEstKg += plantsPerDay * plant.initWeight * Math.pow(rate, d) * dmg;
-                }
-                const dailyKg = plantsPerDay * plant.initWeight * dmg;
+                const totalKg = calcTotalHarvestKg(plant);
+                const firstDayKg = calcDayKg(plant, 0);
                 actions.push({ type: 'harvest', icon: '🌾',
-                    text: `بدء حصاد ${label} — ${pName} — ${cap} نبتة — ~${dailyKg.toFixed(0)} كجم/يوم — الإنتاج المتوقع ~${totalEstKg.toFixed(0)} كجم خلال ${dur} أيام` });
+                    text: `بدء حصاد ${label} — ${pName} — ${cap} نبتة — إنتاج اليوم ~${firstDayKg.toFixed(0)} كجم — إجمالي متوقع ~${totalKg.toFixed(0)} كجم خلال ${dur} يوم` });
             }
         }
     });
