@@ -123,17 +123,42 @@
 
         /* ── Date Navigation ── */
         .date-nav {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
-            position: sticky; top: 0; z-index: 50; background: #f0f2f5; padding: 12px 0;
-            border-bottom: 1px solid #e0e0e0; flex-wrap: nowrap;
+            position: sticky; top: 0; z-index: 50; background: #f0f2f5; padding: 12px 0 8px;
+            border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; text-align: center;
         }
-        .date-nav .date-label {
-            font-size: 15px; font-weight: 700; color: #1a472a; margin-right: 12px; white-space: nowrap;
+        .date-nav .date-display {
+            font-size: 28px; font-weight: 900; color: #1a472a; margin-bottom: 4px; cursor: pointer;
+            line-height: 1.1;
         }
+        .date-nav .date-display .today-badge {
+            font-size: 13px; font-weight: 600; background: #2e7d32; color: #fff;
+            padding: 2px 10px; border-radius: 20px; vertical-align: middle; margin-right: 8px;
+        }
+        .date-nav .nav-btns {
+            display: flex; justify-content: center; align-items: center; gap: 12px;
+        }
+        .date-nav .nav-btns .btn { min-width: 80px; }
         .date-nav input[type="date"] {
-            padding: 6px 10px; border: 1.5px solid #2e7d32; border-radius: 8px; font-size: 13px;
-            font-family: inherit; color: #1a472a; font-weight: 600; cursor: pointer; background: #fff;
+            position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
         }
+
+        /* ── Actions Summary ── */
+        .actions-summary {
+            background: #fff; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08); border-right: 4px solid #ff9800;
+        }
+        .actions-summary h3 { font-size: 15px; color: #1a472a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .actions-summary .action-list { list-style: none; padding: 0; margin: 0; }
+        .actions-summary .action-list li {
+            padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 13px;
+            display: flex; align-items: center; gap: 8px; line-height: 1.6;
+        }
+        .actions-summary .action-list li.harvest-action { background: #e8f5e9; color: #1b5e20; }
+        .actions-summary .action-list li.move-action { background: #e3f2fd; color: #0d47a1; }
+        .actions-summary .action-list li.start-action { background: #fff3e0; color: #e65100; }
+        .actions-summary .action-list li.end-action { background: #fce4ec; color: #b71c1c; }
+        .actions-summary .action-list li .action-icon { font-size: 16px; flex-shrink: 0; }
+        .actions-summary .no-actions { color: #999; font-size: 13px; }
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
@@ -496,14 +521,18 @@
             <h1>نظرة عامة على الإنتاج Production Overview</h1>
 
             <div class="date-nav">
-                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">&rarr; التالي</button>
-                <button class="btn btn-primary btn-sm" onclick="prodNavToday()">اليوم Today</button>
-                <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">السابق &larr;</button>
-                <span class="date-label" id="prodDateLabel"></span>
-                <input type="date" id="prodDatePicker" onchange="prodNavJump(this.value)" title="اختر تاريخ Jump to date">
+                <div class="date-display" id="prodDateLabel" onclick="document.getElementById('prodDatePicker').showPicker()"></div>
+                <input type="date" id="prodDatePicker" onchange="prodNavJump(this.value)">
+                <div class="nav-btns">
+                    <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">التالي &larr;</button>
+                    <button class="btn btn-primary btn-sm" onclick="prodNavToday()">اليوم</button>
+                    <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&rarr; السابق</button>
+                </div>
             </div>
 
             <div class="stat-grid" id="productionStats"></div>
+
+            <div id="productionActions"></div>
 
             <div id="productionCycles"></div>
         </div>
@@ -1108,8 +1137,11 @@ function renderProduction() {
     const today = new Date(); today.setHours(0,0,0,0);
     const isToday = dateStr(viewDate) === dateStr(today);
 
-    // Show current date
-    document.getElementById('prodDateLabel').textContent = viewDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + (isToday ? ' (اليوم)' : '');
+    // Show current date — big display with optional today badge
+    const dateLabel = document.getElementById('prodDateLabel');
+    const arDate = viewDate.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const enDate = viewDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    dateLabel.innerHTML = arDate + ' <span style="font-size:14px;color:#777;font-weight:400">' + enDate + '</span>' + (isToday ? ' <span class="today-badge">اليوم</span>' : '');
     syncDatePicker();
 
     // Combine init entries as schedule items + generated items
@@ -1305,6 +1337,99 @@ function renderProduction() {
             </div>
         </div>`;
     }
+
+    // ── Actions Summary (Today & Tomorrow) ──
+    const actionsDiv = document.getElementById('productionActions');
+    const tomorrow = addDays(viewDate, 1);
+    const tomorrowStr = dateStr(tomorrow);
+
+    function buildActions(targetDate, allItems) {
+        const targetStr = dateStr(targetDate);
+        const nextDayStr = dateStr(addDays(targetDate, 1));
+        const actions = [];
+        allItems.forEach(item => {
+            const plant = plants.find(p => p.id === item.plantId);
+            if (!plant) return;
+            const itemStart = new Date(item.start); itemStart.setHours(0,0,0,0);
+            const itemEnd = new Date(item.end); itemEnd.setHours(0,0,0,0);
+            const endStr = dateStr(itemEnd);
+            const startStr = dateStr(itemStart);
+            const label = resName(item.resType, item.resNum);
+            const pName = plant.name;
+            const phAr = phaseAr[item.phase] || item.phase;
+            const dur = daysBetween(itemStart, itemEnd);
+
+            // Last day of phase (end is exclusive, so last day = end - 1 day)
+            const lastDayStr = dateStr(addDays(itemEnd, -1));
+            if (lastDayStr === targetStr) {
+                // Find what comes next for this resource
+                const nextPhase = allItems.find(ni => ni.resType === item.resType && ni.resNum === item.resNum && ni.start === endStr && ni !== item);
+                if (nextPhase) {
+                    const nextPhAr = phaseAr[nextPhase.phase] || nextPhase.phase;
+                    const nextPlant = plants.find(p => p.id === nextPhase.plantId);
+                    const nextLabel = resName(nextPhase.resType, nextPhase.resNum);
+                    if (item.phase === 'seeding') {
+                        // Last day seeding → prepare to move to nursery or growing
+                        const dest = nextPhase.phase === 'nursery' ? resName(nextPhase.resType, nextPhase.resNum) : resName(nextPhase.resType, nextPhase.resNum);
+                        actions.push({ type: 'move', icon: '📦', text: `آخر يوم ${phAr} ${label} — ${pName}. الاستعداد للنقل إلى ${nextPhAr} ${dest} غداً` });
+                    } else if (item.phase === 'nursery') {
+                        actions.push({ type: 'move', icon: '📦', text: `آخر يوم ${phAr} ${label} — ${pName}. الاستعداد للنقل إلى ${nextPhAr} ${resName(nextPhase.resType, nextPhase.resNum)} غداً` });
+                    } else if (item.phase === 'growing') {
+                        // Estimate harvest production
+                        const estKg = s.ghCapacity * plant.initWeight;
+                        actions.push({ type: 'harvest', icon: '🌾', text: `آخر يوم ${phAr} ${label} — ${pName}. بدء الحصاد غداً — الإنتاج المتوقع ${estKg.toFixed(0)} كجم` });
+                    } else if (item.phase === 'harvesting') {
+                        actions.push({ type: 'end', icon: '✅', text: `آخر يوم حصاد ${label} — ${pName}. انتهاء الدورة` });
+                    }
+                } else {
+                    // No next phase, just ending
+                    actions.push({ type: 'end', icon: '🏁', text: `آخر يوم ${phAr} ${label} — ${pName}` });
+                }
+            }
+
+            // First day of phase
+            if (startStr === targetStr) {
+                if (item.phase === 'seeding') {
+                    actions.push({ type: 'start', icon: '🌱', text: `بدء بذر ${label} — ${pName} — المدة ${dur} أيام` });
+                } else if (item.phase === 'nursery') {
+                    actions.push({ type: 'start', icon: '🏠', text: `بدء حضن ${label} — ${pName} — المدة ${dur} أيام` });
+                } else if (item.phase === 'growing') {
+                    actions.push({ type: 'start', icon: '🌿', text: `بدء نمو ${label} — ${pName} — المدة ${dur} أيام` });
+                } else if (item.phase === 'harvesting') {
+                    const estKg = s.ghCapacity * plant.initWeight;
+                    actions.push({ type: 'harvest', icon: '🌾', text: `بدء حصاد ${label} — ${pName} — الإنتاج المتوقع ~${estKg.toFixed(0)} كجم — المدة ${dur} أيام` });
+                }
+            }
+        });
+        return actions;
+    }
+
+    const todayActions = buildActions(viewDate, allSchedule);
+    const tomorrowActions = buildActions(tomorrow, allSchedule);
+
+    let actionsHtml = '';
+    if (todayActions.length || tomorrowActions.length) {
+        const renderList = (items) => items.length
+            ? '<ul class="action-list">' + items.map(a => {
+                const cls = a.type === 'harvest' ? 'harvest-action' : a.type === 'move' ? 'move-action' : a.type === 'start' ? 'start-action' : 'end-action';
+                return `<li class="${cls}"><span class="action-icon">${a.icon}</span>${esc(a.text)}</li>`;
+            }).join('') + '</ul>'
+            : '<div class="no-actions">لا توجد إجراءات</div>';
+
+        if (todayActions.length) {
+            actionsHtml += `<div class="actions-summary" style="border-right-color:#2e7d32">
+                <h3>📋 إجراءات اليوم</h3>
+                ${renderList(todayActions)}
+            </div>`;
+        }
+        if (tomorrowActions.length) {
+            actionsHtml += `<div class="actions-summary" style="border-right-color:#1565c0">
+                <h3>📋 إجراءات الغد</h3>
+                ${renderList(tomorrowActions)}
+            </div>`;
+        }
+    }
+    actionsDiv.innerHTML = actionsHtml;
 
     // ── All Cycle Cards ──
     const cycleCardsHtml = cycles.map(c => {
