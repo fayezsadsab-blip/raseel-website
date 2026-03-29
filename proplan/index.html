@@ -123,23 +123,25 @@
 
         /* ── Date Navigation ── */
         .date-nav {
-            position: sticky; top: 0; z-index: 50; background: #f0f2f5; padding: 12px 0 8px;
+            position: sticky; top: 0; z-index: 50; background: #f0f2f5; padding: 10px 0;
             border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; text-align: center;
         }
         .date-nav .date-display {
-            font-size: 28px; font-weight: 900; color: #1a472a; margin-bottom: 4px; cursor: pointer;
-            line-height: 1.1;
+            font-size: 22px; font-weight: 900; color: #1a472a; margin-bottom: 6px;
+            line-height: 1.2;
         }
         .date-nav .date-display .today-badge {
-            font-size: 13px; font-weight: 600; background: #2e7d32; color: #fff;
-            padding: 2px 10px; border-radius: 20px; vertical-align: middle; margin-right: 8px;
+            font-size: 11px; font-weight: 600; background: #2e7d32; color: #fff;
+            padding: 2px 8px; border-radius: 20px; vertical-align: middle; margin-right: 6px;
         }
-        .date-nav .nav-btns {
-            display: flex; justify-content: center; align-items: center; gap: 12px;
+        .date-nav .nav-row {
+            display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: nowrap;
         }
-        .date-nav .nav-btns .btn { min-width: 80px; }
+        .date-nav .nav-row .btn { min-width: 60px; }
         .date-nav input[type="date"] {
-            position: absolute; left: -9999px; opacity: 0; width: 1px; height: 1px;
+            padding: 6px 10px; border: 2px solid #2e7d32; border-radius: 8px; font-size: 14px;
+            font-family: inherit; color: #1a472a; font-weight: 600; cursor: pointer; background: #fff;
+            min-width: 130px; text-align: center;
         }
 
         /* ── Actions Summary ── */
@@ -174,8 +176,9 @@
             .main h1 { font-size: 18px; margin-bottom: 16px; }
             .form-grid { grid-template-columns: 1fr; }
             .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-            .date-nav .date-display { font-size: 20px; }
-            .date-nav .nav-btns .btn { min-width: 60px; font-size: 12px; padding: 6px 8px; }
+            .date-nav .date-display { font-size: 16px; }
+            .date-nav .nav-row .btn { min-width: 50px; font-size: 11px; padding: 6px 6px; }
+            .date-nav input[type="date"] { font-size: 12px; min-width: 110px; padding: 6px 4px; }
         }
     </style>
 </head>
@@ -529,12 +532,12 @@
             <h1>نظرة عامة على الإنتاج Production Overview</h1>
 
             <div class="date-nav">
-                <div class="date-display" id="prodDateLabel" onclick="openDatePicker()"></div>
-                <input type="date" id="prodDatePicker" onchange="prodNavJump(this.value)">
-                <div class="nav-btns">
-                    <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">التالي &larr;</button>
+                <div class="date-display" id="prodDateLabel"></div>
+                <div class="nav-row">
+                    <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&rarr;</button>
+                    <input type="date" id="prodDatePicker" onchange="prodNavJump(this.value)">
                     <button class="btn btn-primary btn-sm" onclick="prodNavToday()">اليوم</button>
-                    <button class="btn btn-secondary btn-sm" onclick="prodNavDay(-1)">&rarr; السابق</button>
+                    <button class="btn btn-secondary btn-sm" onclick="prodNavDay(1)">&larr;</button>
                 </div>
             </div>
 
@@ -621,7 +624,22 @@ function logout() {
 async function showApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').classList.add('active');
-    await loadFromFirestore();
+    // Show loading state immediately
+    const statsDiv = document.getElementById('productionStats');
+    const cyclesDiv = document.getElementById('productionCycles');
+    if (statsDiv) statsDiv.innerHTML = '<div class="stat-card" style="grid-column:1/-1"><div class="lbl">جاري التحميل... Loading...</div></div>';
+    if (cyclesDiv) cyclesDiv.innerHTML = '';
+    // Set date display immediately
+    syncDatePicker();
+    const dateLabel = document.getElementById('prodDateLabel');
+    if (dateLabel) {
+        const now = new Date();
+        const arDate = now.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        dateLabel.innerHTML = arDate + ' <span class="today-badge">اليوم</span>';
+    }
+    try {
+        await loadFromFirestore();
+    } catch(e) { console.error('Firestore load failed:', e); }
     loadAllData();
 }
 
@@ -1133,28 +1151,6 @@ function syncDatePicker() {
     const picker = document.getElementById('prodDatePicker');
     if (picker) picker.value = dateStr(prodViewDate);
 }
-function openDatePicker() {
-    const picker = document.getElementById('prodDatePicker');
-    if (!picker) return;
-    picker.style.position = 'static';
-    picker.style.opacity = '1';
-    picker.style.width = 'auto';
-    picker.style.height = 'auto';
-    picker.style.left = 'auto';
-    try { picker.showPicker(); } catch(e) { picker.focus(); picker.click(); }
-    // Re-hide after selection or blur
-    const hide = () => {
-        picker.style.position = 'absolute';
-        picker.style.opacity = '0';
-        picker.style.width = '1px';
-        picker.style.height = '1px';
-        picker.style.left = '-9999px';
-        picker.removeEventListener('change', hide);
-        picker.removeEventListener('blur', hide);
-    };
-    picker.addEventListener('change', hide, { once: true });
-    picker.addEventListener('blur', hide, { once: true });
-}
 
 function buildActions(targetDate, allItems, plants, s) {
     const targetStr = dateStr(targetDate);
@@ -1331,6 +1327,7 @@ function renderActionsSection(viewDate, allSchedule, plants, s) {
 }
 
 function renderProduction() {
+  try {
     const initEntries = getPlanEntries();
     const generated = load(KEYS.generated) || [];
     const plants = getPlants();
@@ -1559,6 +1556,11 @@ function renderProduction() {
     }).join('');
 
     cyclesDiv.innerHTML = summaryHtml + harvestDetailHtml + cycleCardsHtml;
+  } catch(err) {
+    console.error('renderProduction error:', err);
+    const cyclesDiv = document.getElementById('productionCycles');
+    if (cyclesDiv) cyclesDiv.innerHTML = '<div class="card"><p class="empty-msg" style="color:#d32f2f">خطأ في عرض البيانات. حاول تحديث الصفحة.<br>Error rendering. Try refreshing.</p></div>';
+  }
 }
 
 // ── Helpers ──
@@ -1582,7 +1584,7 @@ Object.assign(window, {
     attemptLogin, logout, saveSettings, savePlant, clearPlantForm, editPlant, deletePlant,
     saveAssignment, clearAssignmentForm, editAssignment, deleteAssignment,
     savePlanSection, deletePlanEntry, generateCyclePlan, clearGeneratedPlan,
-    prodNavDay, prodNavToday, prodNavJump, openDatePicker, toggleSkipNursery
+    prodNavDay, prodNavToday, prodNavJump, toggleSkipNursery
 });
 
 // ── Init ──
