@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رسيل | التخطيط اليدوي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style id="baseStyles">
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Tajawal', sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a2e; direction: rtl; }
+
+        /* Login */
+        .login-overlay {
+            position: fixed; inset: 0; background: linear-gradient(135deg, #1a472a 0%, #2e7d32 50%, #4caf50 100%);
+            display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .login-box {
+            background: #fff; border-radius: 16px; padding: 48px 40px; width: 360px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
+        }
+        .login-box h1 { font-size: 28px; color: #1a472a; margin-bottom: 8px; }
+        .login-box p { color: #666; margin-bottom: 32px; font-size: 14px; }
+        .login-box input {
+            width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px;
+            font-size: 18px; text-align: center; letter-spacing: 12px; font-weight: 700;
+            outline: none; transition: border-color .2s;
+        }
+        .login-box input:focus { border-color: #2e7d32; }
+        .login-box .error { color: #d32f2f; font-size: 13px; margin-top: 8px; min-height: 20px; }
+        .login-box button {
+            margin-top: 20px; width: 100%; padding: 14px; background: #2e7d32; color: #fff;
+            border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: background .2s;
+        }
+        .login-box button:hover { background: #1b5e20; }
+
+        /* Layout */
+        .app { display: none; }
+        .app.active { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 240px; background: #1a472a; color: #fff; padding: 24px 0; position: fixed;
+            top: 0; right: 0; bottom: 0; overflow-y: auto; z-index: 100;
+        }
+        .sidebar .brand { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 8px; }
+        .sidebar .brand h2 { font-size: 20px; }
+        .sidebar .brand span { font-size: 12px; opacity: .7; }
+        .sidebar nav a {
+            display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: rgba(255,255,255,.7);
+            text-decoration: none; font-size: 14px; font-weight: 500; transition: all .2s; border-right: 3px solid transparent;
+        }
+        .sidebar nav a:hover { background: rgba(255,255,255,.08); color: #fff; }
+        .sidebar nav a.active { background: rgba(255,255,255,.12); color: #fff; border-right-color: #4caf50; }
+        .sidebar nav a .icon { width: 20px; text-align: center; font-size: 16px; }
+        .sidebar .logout { position: absolute; bottom: 16px; right: 0; left: 0; padding: 0 16px; }
+        .sidebar .logout button {
+            width: 100%; padding: 10px; background: rgba(255,255,255,.1); color: #fff; border: none;
+            border-radius: 8px; cursor: pointer; font-size: 13px; transition: background .2s;
+        }
+        .sidebar .logout button:hover { background: rgba(255,255,255,.2); }
+        .main { margin-right: 240px; flex: 1; padding: 24px; min-width: 0; }
+        .main h1 { font-size: 24px; margin-bottom: 20px; color: #1a472a; }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .card {
+            background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+        .card h3 { font-size: 15px; color: #1a472a; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 12px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select {
+            padding: 9px 11px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px;
+            font-family: inherit; outline: none; transition: border-color .2s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #2e7d32; }
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all .2s; font-family: inherit;
+        }
+        .btn-primary { background: #2e7d32; color: #fff; }
+        .btn-primary:hover { background: #1b5e20; }
+        .btn-danger { background: #d32f2f; color: #fff; }
+        .btn-danger:hover { background: #b71c1c; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-secondary:hover { background: #bdbdbd; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f5f5f5; font-weight: 600; text-align: right; padding: 9px 11px; color: #555; border-bottom: 2px solid #e0e0e0; }
+        td { padding: 9px 11px; border-bottom: 1px solid #eee; }
+        .empty-msg { text-align: center; color: #999; padding: 30px; font-size: 13px; }
+
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #1a472a; color: #fff; padding: 10px 18px; border-radius: 8px;
+            font-size: 13px; z-index: 9000; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+            opacity: 0; transition: opacity .2s, transform .2s;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+        .toast.err { background: #b71c1c; }
+
+        @media (max-width: 900px) {
+            .sidebar { width: 56px; padding: 12px 0; }
+            .sidebar .brand { padding: 0 0 12px; text-align: center; }
+            .sidebar .brand h2 { font-size: 14px; }
+            .sidebar .brand span { display: none; }
+            .sidebar nav a { justify-content: center; padding: 14px 0; }
+            .sidebar nav a span:not(.icon) { display: none; }
+            .sidebar nav a .icon { width: auto; font-size: 18px; }
+            .sidebar .logout button { font-size: 11px; padding: 8px 4px; }
+            .main { margin-right: 56px; padding: 12px; }
+            .main h1 { font-size: 18px; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <style id="timelineStyles">
+        /* Palette */
+        .palette {
+            display: flex; gap: 18px; flex-wrap: wrap; background: #fff;
+            padding: 14px 18px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            margin-bottom: 14px;
+        }
+        .palette-group { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
+        .palette-group h4 { font-size: 12px; color: #555; font-weight: 700; }
+        .palette-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .chip {
+            padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 700;
+            cursor: grab; user-select: none; border: 1.5px solid transparent;
+            color: #1a1a2e;
+        }
+        .chip:active { cursor: grabbing; }
+        .chip.seed-chip { background: #fff59d; border-color: #fbc02d; }
+        .chip.nursery-chip { background: #f8bbd0; border-color: #ec407a; }
+        .chip.gh-chip { background: #c8e6c9; border-color: #43a047; }
+        .chip.dragging { opacity: 0.5; }
+
+        /* Plant selector bar */
+        .plant-bar {
+            display: flex; align-items: center; gap: 14px; background: #fff;
+            padding: 10px 16px; border-radius: 10px; margin-bottom: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08); flex-wrap: wrap;
+        }
+        .plant-bar label { font-size: 13px; font-weight: 600; color: #555; }
+        .plant-bar select {
+            padding: 7px 10px; border: 1.5px solid #ddd; border-radius: 7px;
+            font-size: 13px; font-family: inherit; outline: none;
+        }
+        .plant-bar .legend { display: flex; gap: 10px; font-size: 12px; color: #555; margin-right: auto; }
+        .plant-bar .legend span { display: inline-flex; align-items: center; gap: 5px; }
+        .plant-bar .legend .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+        /* Timeline */
+        .timeline-wrap {
+            background: #fff; border-radius: 12px; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            overflow: hidden;
+        }
+        .timeline-scroll {
+            overflow-x: auto; overflow-y: auto; max-height: 78vh; position: relative;
+        }
+        .tl-grid {
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            position: relative;
+        }
+        .tl-label {
+            background: #fafafa; border-bottom: 1px solid #eee; border-left: 1px solid #e0e0e0;
+            padding: 6px 10px; font-size: 12px; color: #333; display: flex; align-items: center;
+            position: sticky; right: 0; z-index: 3;
+        }
+        .tl-label.gh-header {
+            background: #1a472a; color: #fff; font-weight: 700; font-size: 13px;
+        }
+        .tl-label.phase-seeding { border-right: 4px solid #fbc02d; }
+        .tl-label.phase-nursery { border-right: 4px solid #ec407a; }
+        .tl-label.phase-growing { border-right: 4px solid #43a047; }
+        .tl-label.phase-harvesting { border-right: 4px solid #1e88e5; }
+        .tl-header-cell {
+            background: #f5f5f5; border-bottom: 2px solid #e0e0e0; padding: 4px 0;
+            position: sticky; top: 0; z-index: 4;
+        }
+        .tl-header-cell.corner { z-index: 5; right: 0; }
+        .tl-track {
+            position: relative; border-bottom: 1px solid #eee; height: 36px;
+            background-image: repeating-linear-gradient(
+                to left,
+                transparent 0,
+                transparent calc(var(--week-w) - 1px),
+                #e8e8e8 calc(var(--week-w) - 1px),
+                #e8e8e8 var(--week-w)
+            );
+        }
+        .tl-track.gh-header-track {
+            background: #1a472a; border-bottom: 1px solid #0e2d19; height: 28px;
+        }
+        .tl-track.drop-ok { background-color: rgba(76, 175, 80, .12); }
+        .tl-track.drop-bad { background-color: rgba(211, 47, 47, .12); }
+        .tl-weeks {
+            display: flex; flex-direction: row-reverse; height: 28px;
+        }
+        .tl-week {
+            border-right: 1px solid #e0e0e0; font-size: 11px; color: #666;
+            display: flex; align-items: center; justify-content: center;
+            flex: 0 0 var(--week-w); white-space: nowrap;
+        }
+        .tl-week.month-start { background: #e8f5e9; font-weight: 700; color: #1a472a; }
+        .tl-today-line {
+            position: absolute; top: 0; bottom: 0; width: 2px; background: #d32f2f;
+            z-index: 2; pointer-events: none;
+        }
+        .tl-today-label {
+            position: absolute; top: 2px; transform: translateX(50%); background: #d32f2f;
+            color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 3px; z-index: 2;
+            pointer-events: none;
+        }
+        .tl-hair {
+            position: absolute; top: 0; bottom: 0; width: 1px; background: #1a472a;
+            z-index: 6; pointer-events: none; display: none;
+        }
+        .tl-hair-label {
+            position: absolute; top: 4px; background: #1a472a; color: #fff;
+            font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+            transform: translateX(50%);
+        }
+
+        /* Bars */
+        .bar {
+            position: absolute; top: 3px; height: 30px; border-radius: 5px;
+            padding: 3px 7px; font-size: 11px; font-weight: 700; color: #fff;
+            display: flex; align-items: center; gap: 5px; cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,.2); overflow: hidden;
+            white-space: nowrap; text-overflow: ellipsis;
+        }
+        .bar.seeding { background: #fbc02d; color: #5d4037; }
+        .bar.nursery { background: #ec407a; }
+        .bar.growing { background: #43a047; }
+        .bar.harvesting { background: #1e88e5; }
+        .bar:hover { filter: brightness(1.08); box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+        .bar .bar-x {
+            margin-right: auto; background: rgba(255,255,255,.3); border-radius: 50%;
+            width: 16px; height: 16px; display: inline-flex; align-items: center;
+            justify-content: center; font-size: 11px; cursor: pointer;
+        }
+        .bar .bar-x:hover { background: rgba(255,255,255,.5); }
+        .bar.conflict { outline: 2px solid #d32f2f; animation: pulse .6s 2; }
+        @keyframes pulse { 50% { outline-color: #fff; } }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none;
+            align-items: center; justify-content: center; z-index: 500;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fff; border-radius: 12px; padding: 22px 24px; width: 360px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+        }
+        .modal h3 { font-size: 16px; color: #1a472a; margin-bottom: 14px; }
+        .modal .actions { justify-content: flex-end; }
+
+        /* Init page asset rows */
+        .init-row {
+            display: grid; grid-template-columns: 80px 1fr 1fr 1fr 1fr auto;
+            gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee;
+        }
+        .init-row:last-child { border-bottom: 0; }
+        .init-row .asset-name { font-weight: 700; color: #1a472a; font-size: 13px; }
+        .init-row select, .init-row input {
+            padding: 7px 9px; border: 1.5px solid #ddd; border-radius: 7px;
+            font-size: 12px; font-family: inherit; width: 100%;
+        }
+        .init-row small { font-size: 11px; color: #777; }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div class="login-overlay" id="loginScreen">
+    <div class="login-box">
+        <h1>رسيل</h1>
+        <p>التخطيط اليدوي &mdash; أدخل رمز الدخول</p>
+        <input type="password" id="loginCode" maxlength="10" placeholder="----" autofocus>
+        <div class="error" id="loginError"></div>
+        <button onclick="attemptLogin()">تسجيل الدخول</button>
+    </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>رسيل</h2>
+            <span>التخطيط اليدوي</span>
+        </div>
+        <nav>
+            <a href="#" data-page="timeline" class="active"><span class="icon">&#128197;</span><span>المخطط الزمني Timeline</span></a>
+            <a href="#" data-page="initializer"><span class="icon">&#128295;</span><span>الحالة الحالية Initializer</span></a>
+            <a href="#" data-page="plants"><span class="icon">&#127793;</span><span>النباتات Plants</span></a>
+        </nav>
+        <div class="logout">
+            <button onclick="logout()">&#x2190; تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="page active" id="page-timeline">
+            <h1>المخطط الزمني Manual Plan Timeline</h1>
+
+            <div class="plant-bar">
+                <label>النبات للسحب Current Plant for Drag:</label>
+                <select id="currentPlant"></select>
+                <span class="legend">
+                    <span><span class="sw" style="background:#fbc02d"></span>بذر Seed</span>
+                    <span><span class="sw" style="background:#ec407a"></span>حضن Nursery</span>
+                    <span><span class="sw" style="background:#43a047"></span>نمو Grow</span>
+                    <span><span class="sw" style="background:#1e88e5"></span>حصاد Harvest</span>
+                </span>
+                <button class="btn btn-danger btn-sm" onclick="clearAllBars()">مسح كل المخطط Clear All</button>
+            </div>
+
+            <div class="palette">
+                <div class="palette-group">
+                    <h4>أحواض التبذير Seeding Beds</h4>
+                    <div class="palette-chips" id="paletteSeed"></div>
+                </div>
+                <div class="palette-group">
+                    <h4>منصات الحضن Nursery Stands</h4>
+                    <div class="palette-chips" id="paletteNursery"></div>
+                </div>
+                <div class="palette-group">
+                    <h4>البيوت المحمية Greenhouses</h4>
+                    <div class="palette-chips" id="paletteGH"></div>
+                </div>
+            </div>
+
+            <div class="timeline-wrap">
+                <div class="timeline-scroll" id="timelineScroll">
+                    <div class="tl-grid" id="tlGrid"></div>
+                </div>
+            </div>
+        </div>
+
+<!-- Edit bar modal -->
+<div class="modal-overlay" id="barModal">
+    <div class="modal">
+        <h3 id="barModalTitle">تعديل شريط Edit Bar</h3>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label>تاريخ البدء Start Date</label>
+            <input type="date" id="barStartDate">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+            <label>النبات Plant</label>
+            <select id="barPlant"></select>
+        </div>
+        <div class="actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteBarFromModal()">حذف Delete</button>
+            <button class="btn btn-secondary btn-sm" onclick="closeBarModal()">إلغاء Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveBarFromModal()">حفظ Save</button>
+        </div>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+        <div class="page" id="page-initializer">
+            <h1>الحالة الحالية Initializer</h1>
+            <p style="color:#777;font-size:13px;margin-bottom:14px;">
+                حدد ما هو قيد التشغيل الآن في كل أصل: النبات، تاريخ البدء، والبيت المستهدف لدورة الإنتاج.
+                اتركه فارغاً إذا كان الأصل شاغراً. Specify what's currently running in each asset: plant, start date, destination GH. Leave empty if idle.
+            </p>
+
+            <div class="card">
+                <h3>&#127793; أحواض التبذير Seeding Beds (4)</h3>
+                <div id="initSeedBeds"></div>
+            </div>
+
+            <div class="card">
+                <h3>&#129716; منصات الحضن Nursery Stands (4)</h3>
+                <div id="initNurseries"></div>
+            </div>
+
+            <div class="card">
+                <h3>&#127807; البيوت المحمية Greenhouses (11)</h3>
+                <p style="color:#777;font-size:12px;margin-bottom:10px;">
+                    للبيوت المحمية حدد الطور الحالي (نمو أو حصاد) مع النبات وتاريخ البدء.
+                    For GHs set current phase (growing or harvesting), plant, and start date.
+                </p>
+                <div id="initGreenhouses"></div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="applyInitializer()">تطبيق على الخط الزمني Apply to Timeline</button>
+                <button class="btn btn-secondary" onclick="clearInitializer()">مسح Clear</button>
+            </div>
+            <p id="initStatus" style="margin-top:10px;font-size:13px;color:#2e7d32;"></p>
+        </div>
+        <div class="page" id="page-plants">
+            <h1>النباتات Plants</h1>
+            <div class="card">
+                <h3>مدة كل طور لكل نبات (بالأيام) Phase durations per plant (days)</h3>
+                <p style="color:#777;font-size:13px;margin-bottom:14px;">
+                    قيم افتراضية: 7 بذر، 15 حضن، 25 نمو، 7 حصاد. يمكن تعديلها ثم حفظها.
+                    Defaults: seed 7, nursery 15, grow 25, harvest 7. Edit and save.
+                </p>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>النبات Plant</th>
+                                <th>اللون Color</th>
+                                <th>بذر Seeding</th>
+                                <th>حضن Nursery</th>
+                                <th>نمو Growing</th>
+                                <th>حصاد Harvesting</th>
+                                <th>الإجمالي Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plantsTable"></tbody>
+                    </table>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="savePlants()">حفظ Save</button>
+                    <button class="btn btn-secondary" onclick="resetPlantDefaults()">استعادة الافتراضي Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" id="appScript">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+// Firebase (same project as proplan)
+const firebaseConfig = {
+    apiKey: "AIzaSyCbSIWZIW-kDj3CgUTHfW_Ksn6L1Uq1HO0",
+    authDomain: "raseel-planner.firebaseapp.com",
+    projectId: "raseel-planner",
+    storageBucket: "raseel-planner.firebasestorage.app",
+    messagingSenderId: "1027046612153",
+    appId: "1:1027046612153:web:6b2434a9eab1ef99118f68"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+const ACCESS_CODE = '1234';
+const DOC_KEY = 'raseel_manplan';
+const AUTH_KEY = 'raseel_auth';
+
+// Constants
+const SEED_BED_COUNT = 4;
+const NURSERY_STAND_COUNT = 4;
+const GH_COUNT = 11;
+const CYCLES_PER_GH = 2;
+const HORIZON_WEEKS = 18;
+const HORIZON_DAYS = HORIZON_WEEKS * 7;
+const DAY_WIDTH = 22;
+const WEEK_WIDTH = DAY_WIDTH * 7;
+
+const DEFAULT_PLANTS = [
+    { id: 'A', name: 'Plant A', color: '#4caf50', seed: 7, nursery: 15, grow: 25, harvest: 7 },
+    { id: 'B', name: 'Plant B', color: '#2196f3', seed: 7, nursery: 15, grow: 25, harvest: 7 }
+];
+
+const PHASE_ORDER = ['seeding', 'nursery', 'growing', 'harvesting'];
+const PHASE_AR = { seeding: 'بذر', nursery: 'حضن', growing: 'نمو', harvesting: 'حصاد' };
+const PHASE_EN = { seeding: 'Seeding', nursery: 'Nursery', growing: 'Growing', harvesting: 'Harvesting' };
+
+// State
+let state = {
+    plants: JSON.parse(JSON.stringify(DEFAULT_PLANTS)),
+    bars: [],        // { id, ghAnchor, cycleIndex, phase, asset, plantId, startDate }
+    initializer: {}  // { [assetId]: { plantId, startDate, ghAnchor?, phase? } }
+};
+
+// Helpers
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function today0() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function parseDate(s) { if (!s) return null; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
+function isoDate(d) {
+    const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+}
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+function fmtDate(d) { return d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }); }
+
+function phaseDays(plantId, phase) {
+    const p = state.plants.find(x => x.id === plantId) || DEFAULT_PLANTS[0];
+    return { seeding: p.seed, nursery: p.nursery, growing: p.grow, harvesting: p.harvest }[phase];
+}
+
+function assetType(assetId) {
+    if (assetId.startsWith('SB')) return 'seed';
+    if (assetId.startsWith('NS')) return 'nursery';
+    if (assetId.startsWith('GH')) return 'gh';
+    return null;
+}
+
+function phaseAllowsAsset(phase, assetId) {
+    const t = assetType(assetId);
+    if (phase === 'seeding') return t === 'seed';
+    if (phase === 'nursery') return t === 'nursery';
+    if (phase === 'growing' || phase === 'harvesting') return t === 'gh';
+    return false;
+}
+
+function toast(msg, isErr) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.toggle('err', !!isErr); el.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// Firestore
+async function loadFromFirestore() {
+    try {
+        const snap = await getDoc(doc(db, 'appData', DOC_KEY));
+        if (snap.exists()) {
+            const d = snap.data().data || {};
+            if (Array.isArray(d.plants) && d.plants.length) state.plants = d.plants;
+            if (Array.isArray(d.bars)) state.bars = d.bars;
+            if (d.initializer && typeof d.initializer === 'object') state.initializer = d.initializer;
+        }
+    } catch (e) { console.error('Firestore load error:', e); toast('تعذر جلب البيانات من السحابة', true); }
+}
+async function saveToFirestore() {
+    try {
+        await setDoc(doc(db, 'appData', DOC_KEY), { data: JSON.parse(JSON.stringify(state)) });
+    } catch (e) { console.error('Firestore save error:', e); toast('تعذر الحفظ في السحابة', true); }
+}
+let _saveTimer = null;
+function scheduleSave() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(saveToFirestore, 400);
+}
+
+// Login
+function attemptLogin() {
+    const code = document.getElementById('loginCode').value;
+    if (code === ACCESS_CODE) {
+        localStorage.setItem(AUTH_KEY, JSON.stringify({ loggedIn: true, ts: Date.now() }));
+        showApp();
+    } else {
+        document.getElementById('loginError').textContent = 'رمز غير صحيح Invalid code.';
+    }
+}
+function logout() { localStorage.removeItem(AUTH_KEY); location.reload(); }
+
+async function showApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.add('active');
+    await loadFromFirestore();
+    renderAll();
+}
+function checkAuth() {
+    try {
+        const a = JSON.parse(localStorage.getItem(AUTH_KEY));
+        if (a && a.loggedIn) showApp();
+    } catch {}
+}
+document.getElementById('loginCode').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
+window.attemptLogin = attemptLogin;
+window.logout = logout;
+
+// Expose state for later chunks
+window.__mp = { state, DEFAULT_PLANTS, SEED_BED_COUNT, NURSERY_STAND_COUNT, GH_COUNT, CYCLES_PER_GH,
+    HORIZON_WEEKS, HORIZON_DAYS, DAY_WIDTH, WEEK_WIDTH, PHASE_ORDER, PHASE_AR, PHASE_EN,
+    genId, esc, today0, parseDate, isoDate, addDays, daysBetween, fmtDate,
+    phaseDays, assetType, phaseAllowsAsset, toast, scheduleSave, saveToFirestore };
+
+// Navigation
+document.querySelectorAll('.sidebar nav a').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('.sidebar nav a').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        const pageId = link.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + pageId).classList.add('active');
+        if (pageId === 'plants') window.renderPlantsPage?.();
+        if (pageId === 'initializer') window.renderInitializerPage?.();
+        if (pageId === 'timeline') window.renderTimeline?.();
+    });
+});
+
+function renderAll() {
+    window.renderPlantsPage?.();
+    window.renderInitializerPage?.();
+    window.renderPalette?.();
+    window.renderPlantSelector?.();
+    window.renderTimeline?.();
+}
+
+// Placeholder functions — filled in later chunks
+window.renderPlantsPage = () => {};
+window.renderInitializerPage = () => {};
+window.renderPalette = () => {};
+window.renderPlantSelector = () => {};
+window.renderTimeline = () => {};
+window.savePlants = () => {};
+window.resetPlantDefaults = () => {};
+window.applyInitializer = () => {};
+window.clearInitializer = () => {};
+window.clearAllBars = () => {};
+window.closeBarModal = () => {};
+window.saveBarFromModal = () => {};
+window.deleteBarFromModal = () => {};
+
+checkAuth();
+</script>
+<script type="module" id="plantsScript">
+const mp = window.__mp;
+
+function renderPlantsPage() {
+    const tbody = document.getElementById('plantsTable');
+    tbody.innerHTML = mp.state.plants.map(p => {
+        const total = (+p.seed) + (+p.nursery) + (+p.grow) + (+p.harvest);
+        return `<tr data-pid="${mp.esc(p.id)}">
+            <td><input type="text" data-k="name" value="${mp.esc(p.name)}" style="width:100px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:13px;"></td>
+            <td><input type="color" data-k="color" value="${mp.esc(p.color)}" style="width:40px;height:30px;border:1px solid #ddd;border-radius:6px;padding:0;cursor:pointer;"></td>
+            <td><input type="number" data-k="seed" min="0" value="${+p.seed}" style="width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:13px;"></td>
+            <td><input type="number" data-k="nursery" min="0" value="${+p.nursery}" style="width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:13px;"></td>
+            <td><input type="number" data-k="grow" min="0" value="${+p.grow}" style="width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:13px;"></td>
+            <td><input type="number" data-k="harvest" min="0" value="${+p.harvest}" style="width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:13px;"></td>
+            <td><strong>${total}</strong> يوم</td>
+        </tr>`;
+    }).join('');
+}
+
+function savePlants() {
+    const rows = document.querySelectorAll('#plantsTable tr');
+    rows.forEach(tr => {
+        const pid = tr.dataset.pid;
+        const plant = mp.state.plants.find(x => x.id === pid);
+        if (!plant) return;
+        tr.querySelectorAll('[data-k]').forEach(inp => {
+            const k = inp.dataset.k;
+            if (k === 'name' || k === 'color') plant[k] = inp.value;
+            else plant[k] = Math.max(0, +inp.value || 0);
+        });
+    });
+    mp.scheduleSave();
+    mp.toast('تم حفظ النباتات Plants saved');
+    renderPlantsPage();
+    window.renderPlantSelector?.();
+    window.renderTimeline?.();
+    window.renderInitializerPage?.();
+}
+
+function resetPlantDefaults() {
+    if (!confirm('استعادة القيم الافتراضية؟ Reset to defaults?')) return;
+    mp.state.plants = JSON.parse(JSON.stringify(mp.DEFAULT_PLANTS));
+    mp.scheduleSave();
+    renderPlantsPage();
+    window.renderPlantSelector?.();
+    window.renderTimeline?.();
+}
+
+window.renderPlantsPage = renderPlantsPage;
+window.savePlants = savePlants;
+window.resetPlantDefaults = resetPlantDefaults;
+</script>
+<script type="module" id="initScript">
+const mp = window.__mp;
+
+function plantOptions(selected) {
+    return '<option value="">—</option>' + mp.state.plants.map(p =>
+        `<option value="${mp.esc(p.id)}"${selected === p.id ? ' selected' : ''}>${mp.esc(p.name)}</option>`
+    ).join('');
+}
+
+function ghOptions(selected) {
+    let opts = '<option value="">—</option>';
+    for (let i = 1; i <= mp.GH_COUNT; i++) {
+        opts += `<option value="${i}"${+selected === i ? ' selected' : ''}>GH${i}</option>`;
+    }
+    return opts;
+}
+
+function renderInitializerPage() {
+    // Seeding Beds
+    const todayStr = mp.isoDate(mp.today0());
+    let html = '';
+    for (let i = 1; i <= mp.SEED_BED_COUNT; i++) {
+        const id = 'SB' + i;
+        const cur = mp.state.initializer[id] || {};
+        html += `<div class="init-row" data-asset="${id}">
+            <span class="asset-name">${id}</span>
+            <div><small>النبات Plant</small><select data-k="plantId">${plantOptions(cur.plantId)}</select></div>
+            <div><small>تاريخ البدء Start</small><input type="date" data-k="startDate" value="${cur.startDate || todayStr}"></div>
+            <div><small>البيت المستهدف Target GH</small><select data-k="ghAnchor">${ghOptions(cur.ghAnchor)}</select></div>
+            <div></div>
+            <div></div>
+        </div>`;
+    }
+    document.getElementById('initSeedBeds').innerHTML = html;
+
+    // Nursery Stands
+    html = '';
+    for (let i = 1; i <= mp.NURSERY_STAND_COUNT; i++) {
+        const id = 'NS' + i;
+        const cur = mp.state.initializer[id] || {};
+        html += `<div class="init-row" data-asset="${id}">
+            <span class="asset-name">${id}</span>
+            <div><small>النبات Plant</small><select data-k="plantId">${plantOptions(cur.plantId)}</select></div>
+            <div><small>تاريخ البدء Start</small><input type="date" data-k="startDate" value="${cur.startDate || todayStr}"></div>
+            <div><small>البيت المستهدف Target GH</small><select data-k="ghAnchor">${ghOptions(cur.ghAnchor)}</select></div>
+            <div></div>
+            <div></div>
+        </div>`;
+    }
+    document.getElementById('initNurseries').innerHTML = html;
+
+    // Greenhouses
+    html = '';
+    for (let i = 1; i <= mp.GH_COUNT; i++) {
+        const id = 'GH' + i;
+        const cur = mp.state.initializer[id] || {};
+        html += `<div class="init-row" data-asset="${id}">
+            <span class="asset-name">${id}</span>
+            <div><small>النبات Plant</small><select data-k="plantId">${plantOptions(cur.plantId)}</select></div>
+            <div><small>تاريخ البدء Start</small><input type="date" data-k="startDate" value="${cur.startDate || todayStr}"></div>
+            <div><small>الطور Phase</small><select data-k="phase">
+                <option value="">—</option>
+                <option value="growing"${cur.phase === 'growing' ? ' selected' : ''}>نمو Growing</option>
+                <option value="harvesting"${cur.phase === 'harvesting' ? ' selected' : ''}>حصاد Harvesting</option>
+            </select></div>
+            <div></div>
+            <div></div>
+        </div>`;
+    }
+    document.getElementById('initGreenhouses').innerHTML = html;
+}
+
+function readInitializer() {
+    const result = {};
+    document.querySelectorAll('#page-initializer .init-row').forEach(row => {
+        const id = row.dataset.asset;
+        const obj = {};
+        row.querySelectorAll('[data-k]').forEach(inp => {
+            const v = inp.value.trim();
+            if (v) obj[inp.dataset.k] = v;
+        });
+        if (obj.plantId) result[id] = obj;
+    });
+    return result;
+}
+
+function applyInitializer() {
+    const init = readInitializer();
+    mp.state.initializer = init;
+
+    // Remove existing "init-origin" bars so we can recompute
+    mp.state.bars = mp.state.bars.filter(b => !b.fromInit);
+
+    let created = 0, skipped = 0;
+    Object.entries(init).forEach(([assetId, cfg]) => {
+        if (!cfg.plantId || !cfg.startDate) return;
+        const t = mp.assetType(assetId);
+        let phase, ghAnchor;
+        if (t === 'seed') { phase = 'seeding'; ghAnchor = +cfg.ghAnchor || 0; }
+        else if (t === 'nursery') { phase = 'nursery'; ghAnchor = +cfg.ghAnchor || 0; }
+        else if (t === 'gh') {
+            phase = cfg.phase;
+            ghAnchor = +assetId.replace('GH','');
+        }
+        if (!phase || !ghAnchor) { skipped++; return; }
+
+        mp.state.bars.push({
+            id: mp.genId(),
+            ghAnchor,
+            cycleIndex: 1,
+            phase,
+            asset: assetId,
+            plantId: cfg.plantId,
+            startDate: cfg.startDate,
+            fromInit: true
+        });
+        created++;
+    });
+
+    mp.scheduleSave();
+    window.renderTimeline?.();
+    const status = document.getElementById('initStatus');
+    status.textContent = `تم إنشاء ${created} شريط${skipped ? ` (تخطي ${skipped} بدون بيت مستهدف)` : ''}. Created ${created} bar(s)${skipped ? `, skipped ${skipped} missing target GH` : ''}.`;
+    mp.toast('تم التطبيق Applied to timeline');
+}
+
+function clearInitializer() {
+    if (!confirm('مسح حالة التهيئة؟ Clear initializer state?')) return;
+    mp.state.initializer = {};
+    mp.state.bars = mp.state.bars.filter(b => !b.fromInit);
+    mp.scheduleSave();
+    renderInitializerPage();
+    window.renderTimeline?.();
+    document.getElementById('initStatus').textContent = '';
+}
+
+window.renderInitializerPage = renderInitializerPage;
+window.applyInitializer = applyInitializer;
+window.clearInitializer = clearInitializer;
+</script>
+<script type="module" id="timelineScript">
+const mp = window.__mp;
+
+function renderPalette() {
+    const sb = document.getElementById('paletteSeed');
+    const ns = document.getElementById('paletteNursery');
+    const gh = document.getElementById('paletteGH');
+    sb.innerHTML = ''; ns.innerHTML = ''; gh.innerHTML = '';
+    for (let i = 1; i <= mp.SEED_BED_COUNT; i++) sb.appendChild(makeChip('SB' + i, 'seed-chip'));
+    for (let i = 1; i <= mp.NURSERY_STAND_COUNT; i++) ns.appendChild(makeChip('NS' + i, 'nursery-chip'));
+    for (let i = 1; i <= mp.GH_COUNT; i++) gh.appendChild(makeChip('GH' + i, 'gh-chip'));
+}
+
+function makeChip(assetId, cls) {
+    const el = document.createElement('div');
+    el.className = 'chip ' + cls;
+    el.textContent = assetId;
+    el.draggable = true;
+    el.dataset.asset = assetId;
+    el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/asset', assetId);
+        e.dataTransfer.effectAllowed = 'copy';
+        el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    return el;
+}
+
+function renderPlantSelector() {
+    const sel = document.getElementById('currentPlant');
+    const prev = sel.value;
+    sel.innerHTML = mp.state.plants.map(p => `<option value="${mp.esc(p.id)}">${mp.esc(p.name)}</option>`).join('');
+    if (prev && mp.state.plants.find(p => p.id === prev)) sel.value = prev;
+}
+
+function renderTimeline() {
+    const grid = document.getElementById('tlGrid');
+    const trackWidth = mp.HORIZON_DAYS * mp.DAY_WIDTH;
+    grid.style.setProperty('--week-w', mp.WEEK_WIDTH + 'px');
+    grid.style.gridTemplateColumns = `130px ${trackWidth}px`;
+
+    const today = mp.today0();
+    let html = '';
+
+    // Header row
+    html += `<div class="tl-label tl-header-cell corner" style="font-weight:700;">البيت / الطور GH/Phase</div>`;
+    html += `<div class="tl-header-cell"><div class="tl-weeks">`;
+    for (let w = 0; w < mp.HORIZON_WEEKS; w++) {
+        const d = mp.addDays(today, w * 7);
+        const isMonthStart = d.getDate() <= 7;
+        html += `<div class="tl-week${isMonthStart ? ' month-start' : ''}">${mp.fmtDate(d)}</div>`;
+    }
+    html += `</div></div>`;
+
+    // Rows per GH
+    for (let g = 1; g <= mp.GH_COUNT; g++) {
+        html += `<div class="tl-label gh-header">GH#${g}</div>`;
+        html += `<div class="tl-track gh-header-track"></div>`;
+        for (let c = 1; c <= mp.CYCLES_PER_GH; c++) {
+            for (const phase of mp.PHASE_ORDER) {
+                const cyBadge = mp.CYCLES_PER_GH > 1 ? ` <small style="color:#999;">c${c}</small>` : '';
+                html += `<div class="tl-label phase-${phase}">${mp.PHASE_AR[phase]} ${mp.PHASE_EN[phase]}${cyBadge}</div>`;
+                html += `<div class="tl-track" data-gh="${g}" data-cycle="${c}" data-phase="${phase}"></div>`;
+            }
+        }
+    }
+
+    grid.innerHTML = html;
+
+    // Draw "today" vertical line on each track
+    drawTodayLine();
+
+    // Draw bars
+    drawAllBars();
+
+    // Attach drop handlers (populated by dnd chunk)
+    window.__attachDnd?.();
+}
+
+function drawTodayLine() {
+    // Today is at x = 0 from the right (since timeline starts today).
+    // Actually we compute x relative to left edge, knowing RTL and flex row-reverse.
+    // Tracks are LTR in DOM order; bars use right offset = days_from_today * DAY_WIDTH.
+    // We add a visual "today" marker at right edge (x=0 in right-origin coords).
+    document.querySelectorAll('#tlGrid .tl-track:not(.gh-header-track)').forEach((t, idx) => {
+        const line = document.createElement('div');
+        line.className = 'tl-today-line';
+        line.style.right = '0px';
+        t.appendChild(line);
+        if (idx === 0) {
+            const lbl = document.createElement('div');
+            lbl.className = 'tl-today-label';
+            lbl.textContent = 'اليوم';
+            lbl.style.right = '0px';
+            t.appendChild(lbl);
+        }
+    });
+}
+
+function drawAllBars() {
+    const today = mp.today0();
+    const bars = mp.state.bars;
+    const conflictIds = detectConflicts();
+
+    document.querySelectorAll('#tlGrid .tl-track[data-gh]').forEach(track => {
+        const g = +track.dataset.gh, c = +track.dataset.cycle, phase = track.dataset.phase;
+        const rowBars = bars.filter(b => b.ghAnchor === g && b.cycleIndex === c && b.phase === phase);
+        rowBars.forEach(b => {
+            const start = mp.parseDate(b.startDate); if (!start) return;
+            const days = mp.phaseDays(b.plantId, b.phase);
+            const offsetDays = mp.daysBetween(today, start);
+            const rightPx = offsetDays * mp.DAY_WIDTH;
+            const widthPx = days * mp.DAY_WIDTH;
+            const el = document.createElement('div');
+            el.className = 'bar ' + b.phase + (conflictIds.has(b.id) ? ' conflict' : '');
+            el.style.right = rightPx + 'px';
+            el.style.width = widthPx + 'px';
+            el.dataset.barId = b.id;
+            const plant = mp.state.plants.find(p => p.id === b.plantId);
+            const label = `${b.asset} · ${plant ? plant.name : b.plantId} · ${days}د`;
+            el.innerHTML = `<span>${mp.esc(label)}</span><span class="bar-x" title="حذف">×</span>`;
+            el.addEventListener('click', e => {
+                if (e.target.classList.contains('bar-x')) {
+                    deleteBar(b.id); e.stopPropagation(); return;
+                }
+                openBarModal(b.id);
+            });
+            track.appendChild(el);
+        });
+    });
+}
+
+function detectConflicts() {
+    const conflicts = new Set();
+    const byAsset = {};
+    mp.state.bars.forEach(b => {
+        const start = mp.parseDate(b.startDate);
+        if (!start) return;
+        const days = mp.phaseDays(b.plantId, b.phase);
+        const end = mp.addDays(start, days);
+        (byAsset[b.asset] = byAsset[b.asset] || []).push({ id: b.id, start, end });
+    });
+    Object.values(byAsset).forEach(list => {
+        for (let i = 0; i < list.length; i++) {
+            for (let j = i + 1; j < list.length; j++) {
+                const a = list[i], z = list[j];
+                if (a.start < z.end && z.start < a.end) {
+                    conflicts.add(a.id); conflicts.add(z.id);
+                }
+            }
+        }
+    });
+    return conflicts;
+}
+
+function deleteBar(id) {
+    mp.state.bars = mp.state.bars.filter(b => b.id !== id);
+    mp.scheduleSave();
+    renderTimeline();
+}
+
+function clearAllBars() {
+    if (!confirm('حذف كل الأشرطة من المخطط؟ Delete all bars?')) return;
+    mp.state.bars = [];
+    mp.scheduleSave();
+    renderTimeline();
+}
+
+// Bar edit modal
+let _modalBarId = null;
+function openBarModal(id) {
+    const b = mp.state.bars.find(x => x.id === id); if (!b) return;
+    _modalBarId = id;
+    document.getElementById('barModalTitle').textContent = `${b.asset} · ${mp.PHASE_AR[b.phase]}`;
+    document.getElementById('barStartDate').value = b.startDate;
+    const sel = document.getElementById('barPlant');
+    sel.innerHTML = mp.state.plants.map(p => `<option value="${mp.esc(p.id)}"${p.id === b.plantId ? ' selected' : ''}>${mp.esc(p.name)}</option>`).join('');
+    document.getElementById('barModal').classList.add('active');
+}
+function closeBarModal() { document.getElementById('barModal').classList.remove('active'); _modalBarId = null; }
+function saveBarFromModal() {
+    const b = mp.state.bars.find(x => x.id === _modalBarId); if (!b) return closeBarModal();
+    const start = document.getElementById('barStartDate').value;
+    const plantId = document.getElementById('barPlant').value;
+    if (start) b.startDate = start;
+    if (plantId) b.plantId = plantId;
+    mp.scheduleSave();
+    closeBarModal();
+    renderTimeline();
+}
+function deleteBarFromModal() {
+    if (!_modalBarId) return closeBarModal();
+    deleteBar(_modalBarId);
+    closeBarModal();
+}
+
+window.renderPalette = renderPalette;
+window.renderPlantSelector = renderPlantSelector;
+window.renderTimeline = renderTimeline;
+window.clearAllBars = clearAllBars;
+window.openBarModal = openBarModal;
+window.closeBarModal = closeBarModal;
+window.saveBarFromModal = saveBarFromModal;
+window.deleteBarFromModal = deleteBarFromModal;
+
+// Expose helpers for dnd
+window.__mpTl = { drawAllBars, detectConflicts };
+</script>
+<script type="module" id="dndScript">
+const mp = window.__mp;
+
+let hairEl = null, hairLabel = null;
+
+function ensureHair() {
+    if (hairEl && document.body.contains(hairEl)) return;
+    const scroll = document.getElementById('timelineScroll');
+    hairEl = document.createElement('div');
+    hairEl.className = 'tl-hair';
+    hairLabel = document.createElement('div');
+    hairLabel.className = 'tl-hair-label';
+    hairEl.appendChild(hairLabel);
+    scroll.appendChild(hairEl);
+}
+
+function hideHair() {
+    if (hairEl) hairEl.style.display = 'none';
+}
+
+function computeDropDate(track, clientX) {
+    const rect = track.getBoundingClientRect();
+    // In RTL, "right" is the start of the timeline. Distance from right edge = days from today.
+    const dxFromRight = rect.right - clientX;
+    const days = Math.max(0, Math.round(dxFromRight / mp.DAY_WIDTH));
+    const date = mp.addDays(mp.today0(), days);
+    return { days, date };
+}
+
+function wouldConflict(assetId, startDate, phaseDaysCount, ignoreBarId) {
+    const start = mp.parseDate(startDate);
+    const end = mp.addDays(start, phaseDaysCount);
+    return mp.state.bars.some(b => {
+        if (b.id === ignoreBarId) return false;
+        if (b.asset !== assetId) return false;
+        const bs = mp.parseDate(b.startDate);
+        const bd = mp.phaseDays(b.plantId, b.phase);
+        const be = mp.addDays(bs, bd);
+        return start < be && bs < end;
+    });
+}
+
+function attachDnd() {
+    ensureHair();
+    const tracks = document.querySelectorAll('#tlGrid .tl-track[data-gh]');
+    tracks.forEach(track => {
+        track.addEventListener('dragenter', onDragEnter);
+        track.addEventListener('dragover', onDragOver);
+        track.addEventListener('dragleave', onDragLeave);
+        track.addEventListener('drop', onDrop);
+    });
+
+    // Prevent duplicate listeners for hair cleanup
+    const scroll = document.getElementById('timelineScroll');
+    scroll.addEventListener('dragleave', e => {
+        if (e.target === scroll) hideHair();
+    });
+    document.addEventListener('dragend', hideHair);
+}
+
+function isAssetValidForTrack(assetId, track) {
+    const phase = track.dataset.phase;
+    const g = +track.dataset.gh;
+    if (!mp.phaseAllowsAsset(phase, assetId)) return false;
+    // GH asset must match the GH row it's dropped on
+    if (mp.assetType(assetId) === 'gh') {
+        const gNum = +assetId.replace('GH','');
+        if (gNum !== g) return false;
+    }
+    return true;
+}
+
+function onDragEnter(e) {
+    e.preventDefault();
+    const assetId = currentDragAsset(e);
+    const track = e.currentTarget;
+    track.classList.remove('drop-ok','drop-bad');
+    if (!assetId) return;
+    track.classList.add(isAssetValidForTrack(assetId, track) ? 'drop-ok' : 'drop-bad');
+}
+
+function onDragOver(e) {
+    e.preventDefault();
+    const track = e.currentTarget;
+    e.dataTransfer.dropEffect = 'copy';
+    ensureHair();
+    const rect = track.getBoundingClientRect();
+    const scroll = document.getElementById('timelineScroll');
+    const srect = scroll.getBoundingClientRect();
+    const clientX = e.clientX;
+    const { days, date } = computeDropDate(track, clientX);
+    // Show hairline at this X; position relative to scroll container
+    const leftInScroll = clientX - srect.left + scroll.scrollLeft;
+    hairEl.style.display = 'block';
+    hairEl.style.left = leftInScroll + 'px';
+    hairEl.style.right = 'auto';
+    hairLabel.textContent = mp.isoDate(date) + ' (+' + days + 'د)';
+}
+
+function onDragLeave(e) {
+    e.currentTarget.classList.remove('drop-ok','drop-bad');
+}
+
+function onDrop(e) {
+    e.preventDefault();
+    const track = e.currentTarget;
+    track.classList.remove('drop-ok','drop-bad');
+    hideHair();
+    const assetId = e.dataTransfer.getData('text/asset');
+    if (!assetId) return;
+    if (!isAssetValidForTrack(assetId, track)) {
+        mp.toast('الأصل لا يناسب هذا الصف Asset type doesn\'t match this row', true);
+        return;
+    }
+    const plantId = document.getElementById('currentPlant').value;
+    if (!plantId) { mp.toast('اختر نباتاً Select a plant', true); return; }
+
+    const { days: offsetDays } = computeDropDate(track, e.clientX);
+    const startDate = mp.isoDate(mp.addDays(mp.today0(), offsetDays));
+    const pDays = mp.phaseDays(plantId, track.dataset.phase);
+
+    if (wouldConflict(assetId, startDate, pDays)) {
+        mp.toast(`${assetId} مشغول في هذا التاريخ ${assetId} busy at this date`, true);
+        // Still allow placement but mark conflict (user can see red outline). Alternative: block.
+        // Block by default:
+        return;
+    }
+
+    mp.state.bars.push({
+        id: mp.genId(),
+        ghAnchor: +track.dataset.gh,
+        cycleIndex: +track.dataset.cycle,
+        phase: track.dataset.phase,
+        asset: assetId,
+        plantId,
+        startDate
+    });
+    mp.scheduleSave();
+    window.renderTimeline();
+    mp.toast(`${assetId} @ ${startDate}`);
+}
+
+function currentDragAsset() {
+    // dataTransfer.getData is only available on drop in most browsers.
+    // We rely on the chip that has .dragging class.
+    const dragging = document.querySelector('.chip.dragging');
+    return dragging ? dragging.dataset.asset : null;
+}
+
+window.__attachDnd = attachDnd;
+</script>
+</body>
+</html>
